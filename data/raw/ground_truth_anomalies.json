@@ -1,0 +1,102 @@
+[
+  {
+    "anomaly_id":"ANO-001",
+    "anomaly_type":"volume_drop",
+    "start_date":"2026-08-17T00:00:00.000",
+    "end_date":"2026-08-17T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":null,
+    "expected_root_cause":"Pipeline ingestion partial failure on 2026-08-17",
+    "expected_impact":"~70% fewer orders on that day vs rolling average"
+  },
+  {
+    "anomaly_id":"ANO-002",
+    "anomaly_type":"freshness_gap",
+    "start_date":"2026-08-22T00:00:00.000",
+    "end_date":"2026-08-31T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":"order_timestamp",
+    "expected_root_cause":"Source stopped loading after 2026-08-22 14:00",
+    "expected_impact":"No orders after cutoff time from 2026-08-22 afternoon"
+  },
+  {
+    "anomaly_id":"ANO-003",
+    "anomaly_type":"null_rate_spike",
+    "start_date":"2026-08-12T00:00:00.000",
+    "end_date":"2026-08-14T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":"customer_id",
+    "expected_root_cause":"Upstream CRM sync failure",
+    "expected_impact":"~35% NULL customer_id on affected days"
+  },
+  {
+    "anomaly_id":"ANO-004",
+    "anomaly_type":"duplicates",
+    "start_date":"2026-08-09T00:00:00.000",
+    "end_date":"2026-08-09T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":"order_id",
+    "expected_root_cause":"Replay of Kafka topic without deduplication",
+    "expected_impact":"~8% duplicate order_ids on 2026-08-09"
+  },
+  {
+    "anomaly_id":"ANO-005",
+    "anomaly_type":"distribution_shift",
+    "start_date":"2026-08-19T00:00:00.000",
+    "end_date":"2026-08-21T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":"channel",
+    "expected_root_cause":"Mobile app bug inflating mobile channel attribution",
+    "expected_impact":"Mobile channel share jumps from ~25% to ~55%"
+  },
+  {
+    "anomaly_id":"ANO-006",
+    "anomaly_type":"kpi_drop",
+    "start_date":"2026-08-24T00:00:00.000",
+    "end_date":"2026-08-24T00:00:00.000",
+    "affected_table":"fct_daily_sales",
+    "affected_column":"total_revenue",
+    "expected_root_cause":"Combination of volume drop + dbt filter excluding confirmed orders",
+    "expected_impact":"Revenue drops >50% vs prior week same day"
+  },
+  {
+    "anomaly_id":"ANO-007",
+    "anomaly_type":"dimension_missing",
+    "start_date":"2026-08-15T00:00:00.000",
+    "end_date":"2026-08-31T00:00:00.000",
+    "affected_table":"raw_orders",
+    "affected_column":"country_code",
+    "expected_root_cause":"DE orders mis-tagged or filtered at source",
+    "expected_impact":"Germany disappears from order distribution from 2026-08-15"
+  },
+  {
+    "anomaly_id":"ANO-008",
+    "anomaly_type":"outliers",
+    "start_date":"2026-08-11T00:00:00.000",
+    "end_date":"2026-08-11T00:00:00.000",
+    "affected_table":"raw_order_items",
+    "affected_column":"line_amount",
+    "expected_root_cause":"Pricing engine bug producing extreme line amounts",
+    "expected_impact":"Several orders with line_amount > 50,000 EUR"
+  },
+  {
+    "anomaly_id":"ANO-009",
+    "anomaly_type":"referential_integrity",
+    "start_date":"2026-08-18T00:00:00.000",
+    "end_date":"2026-08-20T00:00:00.000",
+    "affected_table":"raw_order_items",
+    "affected_column":"product_id",
+    "expected_root_cause":"Product catalog out of sync \u2014 orphan product_ids",
+    "expected_impact":"~5% order_items reference non-existent product_id"
+  },
+  {
+    "anomaly_id":"ANO-010",
+    "anomaly_type":"dbt_transformation_error",
+    "start_date":"2026-08-20T00:00:00.000",
+    "end_date":"2026-08-31T00:00:00.000",
+    "affected_table":"int_order_revenue",
+    "affected_column":"order_status",
+    "expected_root_cause":"Overly restrictive WHERE in int_order_revenue.sql excludes 'confirmed' status from 2026-08-20",
+    "expected_impact":"Confirmed orders missing from downstream marts after 2026-08-20"
+  }
+]
