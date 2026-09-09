@@ -29,7 +29,7 @@ from dbt_failure_pipeline.observability.langfuse_setup import (
     setup_langfuse,
     trace_context,
 )
-from dbt_failure_pipeline.tools.investigation_context import build_investigation_context
+from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 
 
 async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str:

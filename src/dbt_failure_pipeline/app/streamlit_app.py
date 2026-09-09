@@ -72,6 +72,7 @@ if st.button("1. Activate scenario & run dbt build", type="primary"):
             st.session_state["incident_id"] = incident_id
             st.success(f"Incident created: {incident_id}")
             st.json(diagnostic.model_dump())
+    st.rerun()
 
 incident_id = st.session_state.get("incident_id") or get_current_incident_id()
 if incident_id:
