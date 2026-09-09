@@ -11,6 +11,8 @@ models:
     description: Staged orders from raw source
   - name: stg_order_items
     description: Staged order line items
+  - name: int_orders
+    description: Orders enriched with customer attributes
   - name: int_order_revenue
     description: Order-level revenue aggregation
   - name: int_customer_orders
