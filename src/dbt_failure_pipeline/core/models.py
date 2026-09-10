@@ -68,6 +68,7 @@ class InvestigationContext(BaseModel):
     manifest: dict[str, Any]
     compiled_sql: dict[str, dict[str, str]]
     git: dict[str, Any]
+    lineage: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProposedPatch(BaseModel):

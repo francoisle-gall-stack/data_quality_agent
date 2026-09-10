@@ -18,9 +18,17 @@ def load_diagnostic(target_dir: Path) -> dict[str, Any]:
     return diagnostic
 
 
+def get_failed_nodes(diagnostic: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return all failed nodes and validate their identifiers."""
+    failed_nodes = diagnostic.get("failed_nodes", [])
+    if not failed_nodes:
+        raise ValueError("diagnostic.json ne contient aucun nœud en échec")
+    for node in failed_nodes:
+        if not node.get("unique_id"):
+            raise ValueError("Un nœud en échec n'a pas de unique_id")
+    return failed_nodes
+
+
 def get_failed_node(diagnostic: dict[str, Any]) -> dict[str, Any]:
-    """Retourne le premier nœud en échec et vérifie son identifiant."""
-    failed_node = diagnostic["failed_nodes"][0]
-    if not failed_node.get("unique_id"):
-        raise ValueError("Le nœud en échec n'a pas de unique_id")
-    return failed_node
+    """Return the first failed node for backwards compatibility."""
+    return get_failed_nodes(diagnostic)[0]

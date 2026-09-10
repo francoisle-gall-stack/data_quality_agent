@@ -1,7 +1,7 @@
 select
     o.order_id,
     o.customer_id,
-    c.customer_segment,
+    c.customer_type,
     o.order_date,
     o.order_status,
     o.channel

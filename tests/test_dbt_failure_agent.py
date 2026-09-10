@@ -9,6 +9,9 @@ from dbt_failure_pipeline.core.exceptions import PatchNotAllowedError
 from dbt_failure_pipeline.core.models import ErrorCategory
 from dbt_failure_pipeline.deterministic.diagnostic import extract_dbt_errors, run_diagnostic
 from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
+from dbt_failure_pipeline.deterministic.investigation.context.manifest import (
+    load_filtered_manifest,
+)
 from dbt_failure_pipeline.evaluation.classification import classify_error
 from dbt_failure_pipeline.tools.model_tools import get_dbt_model
 from dbt_failure_pipeline.tools.patch_tools import propose_patch
@@ -50,6 +53,76 @@ def test_get_dbt_model_returns_source_sql(tmp_path, monkeypatch):
 
     assert result["path"] == "dbt/models/intermediate/orders.sql"
     assert result["sql"] == "select * from {{ ref('stg_orders') }}"
+
+
+def test_filtered_manifest_contains_transitive_lineage_for_multiple_failures(tmp_path):
+    target = tmp_path / "target"
+    target.mkdir()
+    manifest = {
+        "nodes": {
+            "model.project.upstream": {
+                "unique_id": "model.project.upstream",
+                "resource_type": "model",
+                "name": "upstream",
+                "depends_on": {"nodes": []},
+                "raw_code": "select 1",
+            },
+            "model.project.failed_a": {
+                "unique_id": "model.project.failed_a",
+                "resource_type": "model",
+                "name": "failed_a",
+                "depends_on": {"nodes": ["model.project.upstream"]},
+                "raw_code": "select * from upstream",
+            },
+            "model.project.failed_b": {
+                "unique_id": "model.project.failed_b",
+                "resource_type": "model",
+                "name": "failed_b",
+                "depends_on": {"nodes": ["model.project.upstream"]},
+                "raw_code": "select * from upstream",
+            },
+            "model.project.downstream": {
+                "unique_id": "model.project.downstream",
+                "resource_type": "model",
+                "name": "downstream",
+                "depends_on": {
+                    "nodes": ["model.project.failed_a", "model.project.failed_b"]
+                },
+                "raw_code": "select * from failed_a",
+            },
+            "model.project.unrelated": {
+                "unique_id": "model.project.unrelated",
+                "resource_type": "model",
+                "name": "unrelated",
+                "depends_on": {"nodes": []},
+            },
+            "source.project.raw": {
+                "unique_id": "source.project.raw",
+                "resource_type": "source",
+                "name": "raw",
+                "depends_on": {"nodes": []},
+            },
+        }
+    }
+    (target / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = load_filtered_manifest(
+        target, ["model.project.failed_a", "model.project.failed_b"]
+    )
+
+    assert set(result["nodes"]) == {
+        "model.project.upstream",
+        "model.project.failed_a",
+        "model.project.failed_b",
+        "model.project.downstream",
+    }
+    assert result["lineage"]["upstream_model_count"] == 1
+    assert result["lineage"]["downstream_model_count"] == 1
+    assert result["lineage"]["upstream_models"] == ["model.project.upstream"]
+    assert result["lineage"]["downstream_models"] == ["model.project.downstream"]
+    assert result["nodes"]["model.project.failed_a"]["raw_code"] == (
+        "select * from upstream"
+    )
 
 
 def test_context_filters_manifest_and_loads_compiled_sql(tmp_path, monkeypatch):
