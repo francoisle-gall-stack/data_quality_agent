@@ -1,0 +1,4 @@
+scenario_id: SC005
+name: unique test failure on order_id
+patch_files:
+  - dbt/tests/scenario_unique_orders.sql

@@ -1,0 +1,4 @@
+scenario_id: SC008
+name: Upstream model broken
+patch_files:
+  - dbt/models/0_staging/stg_orders.sql

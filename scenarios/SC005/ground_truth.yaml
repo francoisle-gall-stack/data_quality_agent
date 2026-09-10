@@ -1,0 +1,7 @@
+scenario_id: SC005
+error_type: dbt_test_failure
+expected_root_cause:
+  model: stg_orders
+  issue: duplicate_order_id
+expected_fix:
+  file: dbt/tests/scenario_unique_orders.sql

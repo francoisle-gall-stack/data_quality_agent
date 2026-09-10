@@ -1,0 +1,4 @@
+scenario_id: SC006
+name: relationships test failure
+patch_files:
+  - dbt/tests/scenario_relationships_product.sql

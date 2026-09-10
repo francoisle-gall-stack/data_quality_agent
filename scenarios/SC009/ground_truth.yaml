@@ -1,0 +1,7 @@
+scenario_id: SC009
+error_type: sql_compilation
+expected_root_cause:
+  model: int_orders
+  issue: syntax_error
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql

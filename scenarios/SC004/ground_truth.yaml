@@ -1,0 +1,7 @@
+scenario_id: SC004
+error_type: dbt_test_failure
+expected_root_cause:
+  model: stg_orders
+  issue: null_customer_id
+expected_fix:
+  file: dbt/tests/scenario_not_null_customer.sql

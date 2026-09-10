@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: Staged customers from raw source
+  - name: stg_products
+    description: Staged products from raw source
+  - name: stg_stores
+    description: Staged stores from raw source
+  - name: stg_orders
+    description: Staged orders from raw source
+  - name: stg_order_items
+    description: Staged order line items
+  - name: int_orders
+    description: Orders enriched with customer attributes
+  - name: int_order_revenue
+    description: Order-level revenue aggregation
+  - name: int_customer_orders
+    description: Customer order rollups
+  - name: fct_orders
+    description: Fact table of orders with revenue
+  - name: fct_daily_sales
+    description: Daily sales KPIs
+  - name: dim_customers
+    description: Customer dimension
+  - name: dim_products
+    description: Product dimension
+  - name: dim_stores
+    description: Store dimension

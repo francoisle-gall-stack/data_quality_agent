@@ -1,0 +1,4 @@
+scenario_id: SC004
+name: not_null test failure on customer_id
+patch_files:
+  - dbt/tests/scenario_not_null_customer.sql

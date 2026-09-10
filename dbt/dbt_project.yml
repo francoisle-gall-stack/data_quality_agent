@@ -1,0 +1,31 @@
+name: dq_retail
+version: 1.0.0
+config-version: 2
+profile: dq_retail
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dq_retail:
+    0_staging:
+      +materialized: view
+      +schema: staging
+    1_intermediate:
+      +materialized: view
+      +schema: intermediate
+    2_marts:
+      +materialized: table
+      +schema: marts
+
+vars:
+  dbt_transformation_bug_start_date: '2026-08-20'

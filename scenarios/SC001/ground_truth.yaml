@@ -1,0 +1,13 @@
+scenario_id: SC001
+error_type: schema_change
+expected_root_cause:
+  model: stg_customers
+  issue: column_renamed
+  from: customer_segment
+  to: customer_type
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql
+expected_evidence:
+  - dbt_error
+  - schema_difference
+  - git_diff

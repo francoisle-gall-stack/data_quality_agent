@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dq-platform"
+version = "0.1.0"
+description = "Agentic Data Quality Platform — e-commerce demo with dbt, DuckDB, ADK agents"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "duckdb==1.5.5",
+    "dbt-core==1.11.14",
+    "dbt-duckdb==1.11.0",
+    "pandas>=2.2,<3",
+    "numpy>=1.26,<3",
+    "pydantic>=2.12,<3",
+    "pydantic-settings>=2.6,<3",
+    "python-dotenv>=1.0,<2",
+    "streamlit>=1.50,<2",
+    "plotly>=5.24,<6",
+    "google-adk>=2.8.0,<3",
+    "langfuse>=4.14.6,<5",
+    "openinference-instrumentation-google-adk>=0.1.0",
+    "opentelemetry-sdk>=1.39,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
+    "GitPython>=3.1,<4",
+    "PyYAML>=6.0,<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.24,<1",
+    "ruff>=0.8,<1",
+]
+
+[project.scripts]
+dq-run-checks = "dq_platform.quality.runner:main"
+dq-investigate = "dq_platform.orchestration.pipeline:main"
+dbt-activate-scenario = "dbt_failure_pipeline.scenarios.activate_cli:main"
+dbt-reset-scenario = "dbt_failure_pipeline.scenarios.reset_cli:main"
+dbt-run-investigation = "dbt_failure_pipeline.orchestration.pipeline:main"
+dbt-run-diagnostic = "dbt_failure_pipeline.deterministic.diagnostic:run_diagnostic_cli"
+dbt-eval-scenarios = "dbt_failure_pipeline.evaluation.runner:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

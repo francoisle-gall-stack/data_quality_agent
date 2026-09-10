@@ -1,0 +1,4 @@
+scenario_id: SC009
+name: SQL syntax error
+patch_files:
+  - dbt/models/1_intermediate/int_orders.sql
