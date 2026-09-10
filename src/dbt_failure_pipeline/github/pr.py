@@ -13,7 +13,17 @@ def create_pull_request(title: str, body: str) -> str:
 
     env = {**dict(__import__("os").environ), "GH_TOKEN": settings.github_token}
     proc = subprocess.run(
-        ["gh", "pr", "create", "--title", title, "--body", body],
+        [
+            "gh",
+            "pr",
+            "create",
+            "--base",
+            "main",
+            "--title",
+            title,
+            "--body",
+            body,
+        ],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,

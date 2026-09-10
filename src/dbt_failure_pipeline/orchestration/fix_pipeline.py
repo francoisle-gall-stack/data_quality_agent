@@ -20,9 +20,38 @@ def apply_patch(file_path: str, patched_content: str) -> None:
     target.write_text(patched_content, encoding="utf-8")
 
 
-def create_branch(branch_name: str) -> None:
+def prepare_branch_from_main(branch_name: str) -> None:
+    """Recreate the fix branch from the latest local main branch."""
     subprocess.run(
-        ["git", "checkout", "-b", branch_name],
+        ["git", "checkout", "main"],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "pull", "--ff-only", "origin", "main"],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "branch", "-D", branch_name],
+        cwd=PROJECT_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "push", "origin", "--delete", branch_name],
+        cwd=PROJECT_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "checkout", "-b", branch_name, "main"],
         cwd=PROJECT_ROOT,
         check=True,
         capture_output=True,
@@ -34,6 +63,16 @@ def create_commit(message: str) -> None:
     subprocess.run(["git", "add", "-A"], cwd=PROJECT_ROOT, check=True)
     subprocess.run(
         ["git", "commit", "-m", message],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def push_branch(branch_name: str) -> None:
+    subprocess.run(
+        ["git", "push", "--set-upstream", "origin", branch_name],
         cwd=PROJECT_ROOT,
         check=True,
         capture_output=True,
@@ -58,14 +97,12 @@ def run_fix_pipeline(incident_id: str, human_approved: bool = True) -> Investiga
 
     branch = f"fix/dbt-{incident_id.lower()}"
     try:
-        create_branch(branch)
+        prepare_branch_from_main(branch)
     except subprocess.CalledProcessError:
-        subprocess.run(
-            ["git", "checkout", branch],
-            cwd=PROJECT_ROOT,
-            check=False,
-            capture_output=True,
-        )
+        record.status = IncidentStatus.NEEDS_HUMAN
+        record.metadata["git_error"] = "Unable to prepare fix branch from main"
+        save_incident(record)
+        return record
 
     apply_patch(record.patch.file_path, record.patch.patched_content)
 
@@ -86,6 +123,7 @@ def run_fix_pipeline(incident_id: str, human_approved: bool = True) -> Investiga
         msg = f"fix(dbt): {record.patch.summary} [{incident_id}]"
         try:
             create_commit(msg)
+            push_branch(branch)
             pr_body = _build_pr_body(record)
             pr_url = create_pull_request(
                 title=f"fix(dbt): {record.patch.summary}",
