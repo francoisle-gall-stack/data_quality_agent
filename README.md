@@ -33,65 +33,51 @@ Data Generator → DuckDB (raw) → dbt (staging/int/marts)
 
 ## Pipeline `dbt_failure_pipeline`
 
-Le pipeline de traitement des échecs dbt est séparé en étapes indépendantes :
+Le pipeline de traitement des échecs dbt est organisé en quatre étapes :
 
 ```mermaid
 flowchart TD
-    activate["Activation du scénario"] --> build["dbt build"]
-    build --> diagnostic["Diagnostic déterministe"]
-    diagnostic --> artifact["diagnostic.json"]
-    artifact --> context["Contexte d'investigation"]
-    manifest["manifest.json"] --> context
-    compiled["SQL compilés"] --> context
-    git["Historique Git"] --> context
-    context --> investigation["Investigation Agent"]
-    investigation --> rca["RCA sauvegardée"]
-    rca --> correction["Correction Agent"]
-    correction --> patch["Patch proposé"]
+    activate["Activation du scénario"] --> step1["1. Détection et diagnostic"]
+    step1 --> diagnostic["diagnostic.json"]
+    diagnostic --> step2["2. Construction du contexte"]
+    manifest["manifest.json"] --> step2
+    compiled["SQL compilés"] --> step2
+    git["Diff et historique Git"] --> step2
+    step2 --> step3["3. Investigation Agent"]
+    step3 --> result["Résultat d'investigation sauvegardé"]
+    result --> step4["4. Correction et validation"]
+    step4 --> patch["Patch proposé"]
     patch --> approval["Approbation humaine"]
-    approval --> validation["dbt compile / dbt test"]
+    approval --> validation["dbt compile / dbt test / dbt build"]
     validation --> pr["Commit et Pull Request"]
 ```
 
-### Détection et diagnostic
+### 1. Détection et diagnostic
 
-`run_dbt_build()` exécute le projet dbt. En cas d'échec, `run_diagnostic()`
-lit `dbt/target/run_results.json` et produit `dbt/target/diagnostic.json`.
-Cette phase est entièrement déterministe et ne fait appel à aucun LLM.
+- `run_dbt_build()` exécute le projet dbt et détecte l'échec.
+- `run_diagnostic()` lit `run_results.json` et produit `diagnostic.json`.
+- Phase déterministe : aucun appel LLM.
 
-Le diagnostic contient le `unique_id` des nœuds en échec, leur type, leur
-chemin de modèle et leur message d'erreur.
+### 2. Construction du contexte d'investigation
 
-### Contexte d'investigation
+- `build_investigation_context()` assemble les quatre sources :
+  `diagnostic.json`, `manifest.json`, SQL compilés et historique Git.
+- Le manifeste est filtré sur le nœud en échec et ses dépendances directes.
+- Les SQL compilés et l'historique Git couvrent le modèle en échec et ses parents.
 
-`build_investigation_context()` prépare un contexte à partir de quatre sources
-uniquement :
+### 3. Investigation Agent
 
-1. `dbt/target/diagnostic.json` ;
-2. `dbt/target/manifest.json`, limité au nœud en échec et aux nœuds référencés
-   directement dans `depends_on.nodes` ;
-3. les SQL compilés du nœud en échec et de ses parents directs ;
-4. le diff de travail et l'historique Git récent du modèle en échec.
+- `run_investigation(incident_id)` injecte le contexte déterministe dans le prompt.
+- `investigation_agent` est appelé une seule fois et n'utilise aucun tool.
+- L'agent produit le résultat d'investigation, la confiance et les modèles affectés, sans modifier le dépôt.
 
-Ce contexte est injecté dans le prompt. L'Investigation Agent n'a plus de
-tools à appeler : une investigation correspond donc à un seul appel LLM. Il
-produit une analyse de cause racine sans modifier le dépôt.
+### 4. Correction et validation
 
-### Correction séparée
-
-`run_investigation(incident_id)` s'arrête après la RCA et place l'incident dans
-l'état `INVESTIGATED`.
-
-Après revue de cette analyse, `run_correction(incident_id)` lance séparément le
-Correction Agent. Celui-ci propose un patch limité à un fichier autorisé et
-place l'incident dans l'état `AWAITING_APPROVAL`.
-
-### Approbation et validation
-
-`run_fix_pipeline()` n'est exécuté qu'après approbation humaine. Il applique le
-patch, exécute `dbt compile` et `dbt test`, puis crée un commit et une Pull
-Request si la validation réussit. Une validation échouée nécessite une revue
-humaine.
+- `run_correction(incident_id)` appelle le `correction_agent` après revue du résultat d'investigation.
+- L'agent appelle `get_dbt_model`, puis `propose_patch` pour un seul fichier autorisé.
+- Après approbation humaine, `run_fix_pipeline()` applique le patch et lance
+  `dbt compile`, `dbt test` et, si nécessaire, `dbt build`.
+- Si les validations réussissent, un commit et une Pull Request sont créés.
 
 ## Quick start
 
