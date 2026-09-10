@@ -59,8 +59,8 @@ def prepare_branch_from_main(branch_name: str) -> None:
     )
 
 
-def create_commit(message: str) -> None:
-    subprocess.run(["git", "add", "-A"], cwd=PROJECT_ROOT, check=True)
+def create_commit(message: str, file_path: str) -> None:
+    subprocess.run(["git", "add", "--", file_path], cwd=PROJECT_ROOT, check=True)
     subprocess.run(
         ["git", "commit", "-m", message],
         cwd=PROJECT_ROOT,
@@ -122,7 +122,7 @@ def run_fix_pipeline(incident_id: str, human_approved: bool = True) -> Investiga
     if record.validation_passed:
         msg = f"fix(dbt): {record.patch.summary} [{incident_id}]"
         try:
-            create_commit(msg)
+            create_commit(msg, record.patch.file_path)
             push_branch(branch)
             pr_body = _build_pr_body(record)
             pr_url = create_pull_request(

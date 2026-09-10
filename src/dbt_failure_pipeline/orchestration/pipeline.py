@@ -6,9 +6,7 @@ import asyncio
 import json
 import os
 import re
-import time
 from contextlib import nullcontext
-from pathlib import Path
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -34,29 +32,7 @@ from dbt_failure_pipeline.observability.langfuse_setup import (
 )
 
 
-def _debug_log(hypothesis_id: str, message: str, data: dict) -> None:
-    # #region agent log
-    payload = {
-        "sessionId": "94f317",
-        "runId": "investigation-loop-2",
-        "hypothesisId": hypothesis_id,
-        "location": "src/dbt_failure_pipeline/orchestration/pipeline.py",
-        "message": message,
-        "data": data,
-        "timestamp": int(time.time() * 1000),
-    }
-    try:
-        with (Path(__file__).resolve().parents[3] / "debug-94f317.log").open(
-            "a", encoding="utf-8"
-        ) as log_file:
-            log_file.write(json.dumps(payload) + "\n")
-    except OSError:
-        pass
-    # #endregion
-
-
 async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str:
-    _debug_log("H4", "agent run entered", {"app_name": app_name, "session_id": session_id})
     session_service = InMemorySessionService()
     await session_service.create_session(
         app_name=app_name, user_id="dbt-failure-agent", session_id=session_id
@@ -65,22 +41,9 @@ async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str
     user_msg = types.Content(role="user", parts=[types.Part(text=message)])
     final_text = ""
     tool_result = ""
-    event_count = 0
     async for event in runner.run_async(
         user_id="dbt-failure-agent", session_id=session_id, new_message=user_msg
     ):
-        event_count += 1
-        _debug_log(
-            "H4",
-            "agent event received",
-            {
-                "app_name": app_name,
-                "session_id": session_id,
-                "event_count": event_count,
-                "is_final": event.is_final_response(),
-                "has_error": bool(event.error_message),
-            },
-        )
         if event.content and event.content.parts:
             for part in event.content.parts:
                 function_response = part.function_response
@@ -98,11 +61,6 @@ async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str
                 final_text = event.content.parts[0].text or ""
             elif event.error_message:
                 final_text = f"Agent error: {event.error_message}"
-    _debug_log(
-        "H4",
-        "agent run exited",
-        {"app_name": app_name, "session_id": session_id, "event_count": event_count},
-    )
     return final_text if "diff_unified" in final_text else tool_result or final_text
 
 
@@ -156,7 +114,6 @@ def _build_rca_from_investigation(output: str) -> RootCauseAnalysis:
 
 async def run_investigation(incident_id: str) -> InvestigationRecord:
     langfuse_enabled = setup_langfuse()
-    _debug_log("H3", "run_investigation entered", {"incident_id": incident_id})
     record = load_incident(incident_id)
     record.status = IncidentStatus.INVESTIGATING
     save_incident(record)
@@ -215,11 +172,6 @@ Do not propose a patch.
 
     record.status = IncidentStatus.INVESTIGATED
     save_incident(record)
-    _debug_log(
-        "H3",
-        "run_investigation exited",
-        {"incident_id": incident_id, "status": record.status.value},
-    )
     flush_langfuse()
     return record
 
