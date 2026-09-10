@@ -6,9 +6,7 @@ import asyncio
 import difflib
 import html
 import json
-import time
 import uuid
-from pathlib import Path
 
 import streamlit as st
 
@@ -35,27 +33,6 @@ from dbt_failure_pipeline.scenarios.manager import (
 
 def _run_async(coro):
     return asyncio.run(coro)
-
-
-def _debug_log(hypothesis_id: str, message: str, data: dict) -> None:
-    # #region agent log
-    payload = {
-        "sessionId": "94f317",
-        "runId": "investigation-loop-2",
-        "hypothesisId": hypothesis_id,
-        "location": "src/dbt_failure_pipeline/app/streamlit_app.py",
-        "message": message,
-        "data": data,
-        "timestamp": int(time.time() * 1000),
-    }
-    try:
-        with (Path(__file__).resolve().parents[3] / "debug-94f317.log").open(
-            "a", encoding="utf-8"
-        ) as log_file:
-            log_file.write(json.dumps(payload) + "\n")
-    except OSError:
-        pass
-    # #endregion
 
 
 def _render_side_by_side_diff(original: str, corrected: str) -> None:
@@ -165,11 +142,6 @@ with col2:
     st.info(f"Active scenario: {active or 'none'}")
 
 if st.button("Run diagnostic, investigation & correction", type="primary"):
-    _debug_log(
-        "H1",
-        "workflow button branch entered",
-        {"scenario_id": scenario_id, "session_incident_id": st.session_state.get("incident_id")},
-    )
     if reset_first:
         reset_scenario()
     activate_scenario(scenario_id)
@@ -202,11 +174,6 @@ if st.button("Run diagnostic, investigation & correction", type="primary"):
                 st.json(diagnostic.model_dump())
                 with st.spinner("Running investigation..."):
                     record = _run_async(run_investigation(incident_id))
-                _debug_log(
-                    "H2",
-                    "investigation returned",
-                    {"incident_id": incident_id, "status": record.status.value},
-                )
                 st.session_state["record"] = record
                 if record.investigation_output:
                     st.subheader("Investigation")
