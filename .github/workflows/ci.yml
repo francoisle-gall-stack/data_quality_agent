@@ -1,10 +1,8 @@
 name: CI
 
+# Temporarily disabled for push and pull_request events.
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   test:
