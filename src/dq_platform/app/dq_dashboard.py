@@ -1,6 +1,5 @@
 """Streamlit Data Quality monitoring dashboard."""
 
-import json
 
 import pandas as pd
 import streamlit as st
