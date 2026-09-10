@@ -1,0 +1,5 @@
+scenario_id: SC001
+name: Column renamed customer_segment to customer_type
+description: int_orders references customer_segment but staging exposes customer_type
+patch_files:
+  - dbt/models/1_intermediate/int_orders.sql

@@ -1,0 +1,8 @@
+scenario_id: SC002
+error_type: schema_change
+expected_root_cause:
+  model: stg_customers
+  issue: column_removed
+  column: email
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql

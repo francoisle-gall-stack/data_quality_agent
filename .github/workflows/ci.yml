@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Bootstrap warehouse
+        run: python scripts/bootstrap_warehouse.py
+        env:
+          DUCKDB_PATH: data/warehouse.duckdb
+
+      - name: dbt build (baseline)
+        env:
+          DUCKDB_PATH: data/warehouse.duckdb
+        run: dbt build --project-dir dbt --profiles-dir dbt
+
+      - name: Lint
+        run: ruff check src/dbt_failure_pipeline tests
+
+      - name: pytest
+        run: pytest -q
+
+      - name: Evaluate scenarios (classification, no LLM)
+        env:
+          DUCKDB_PATH: data/warehouse.duckdb
+        run: python -m dbt_failure_pipeline.evaluation.runner

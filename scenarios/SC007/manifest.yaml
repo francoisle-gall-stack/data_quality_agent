@@ -1,0 +1,4 @@
+scenario_id: SC007
+name: accepted_values test failure on channel
+patch_files:
+  - dbt/tests/scenario_accepted_channel.sql

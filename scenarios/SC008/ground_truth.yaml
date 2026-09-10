@@ -1,0 +1,7 @@
+scenario_id: SC008
+error_type: schema_change
+expected_root_cause:
+  model: stg_orders
+  issue: broken_upstream_column
+expected_fix:
+  file: dbt/models/0_staging/stg_orders.sql

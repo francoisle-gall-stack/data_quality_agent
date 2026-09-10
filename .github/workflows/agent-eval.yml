@@ -1,0 +1,40 @@
+name: Agent Eval (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_agents:
+        description: Run live ADK agents (requires secrets)
+        type: boolean
+        default: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Bootstrap warehouse
+        run: python scripts/bootstrap_warehouse.py
+        env:
+          DUCKDB_PATH: data/warehouse.duckdb
+
+      - name: Run scenario evaluation
+        env:
+          DUCKDB_PATH: data/warehouse.duckdb
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+        run: |
+          if [ "${{ inputs.use_agents }}" = "true" ]; then
+            python -m dbt_failure_pipeline.evaluation.runner --use-agents
+          else
+            python -m dbt_failure_pipeline.evaluation.runner
+          fi

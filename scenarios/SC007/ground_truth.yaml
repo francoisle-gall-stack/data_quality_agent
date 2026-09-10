@@ -1,0 +1,7 @@
+scenario_id: SC007
+error_type: dbt_test_failure
+expected_root_cause:
+  model: stg_orders
+  issue: invalid_channel_value
+expected_fix:
+  file: dbt/tests/scenario_accepted_channel.sql
