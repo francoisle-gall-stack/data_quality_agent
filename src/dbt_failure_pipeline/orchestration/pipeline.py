@@ -23,13 +23,13 @@ from dbt_failure_pipeline.core.models import (
 )
 from dbt_failure_pipeline.core.state import load_incident, save_incident
 from dbt_failure_pipeline.deterministic import run_diagnostic
+from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 from dbt_failure_pipeline.evaluation.classification import classify_diagnostic, is_auto_fixable
 from dbt_failure_pipeline.observability.langfuse_setup import (
     flush_langfuse,
     setup_langfuse,
     trace_context,
 )
-from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 
 
 async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str:
@@ -40,15 +40,28 @@ async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str
     runner = Runner(agent=agent, app_name=app_name, session_service=session_service)
     user_msg = types.Content(role="user", parts=[types.Part(text=message)])
     final_text = ""
+    tool_result = ""
     async for event in runner.run_async(
         user_id="dbt-failure-agent", session_id=session_id, new_message=user_msg
     ):
+        if event.content and event.content.parts:
+            for part in event.content.parts:
+                function_response = part.function_response
+                if function_response and function_response.name == "propose_patch":
+                    response = function_response.response or {}
+                    result = response.get("result") if isinstance(response, dict) else response
+                    if result is None and isinstance(response, dict) and "diff_unified" in response:
+                        result = response
+                    if isinstance(result, str):
+                        tool_result = result
+                    elif result is not None:
+                        tool_result = json.dumps(result)
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_text = event.content.parts[0].text or ""
             elif event.error_message:
                 final_text = f"Agent error: {event.error_message}"
-    return final_text
+    return final_text if "diff_unified" in final_text else tool_result or final_text
 
 
 def _parse_patch_from_output(output: str) -> ProposedPatch | None:
@@ -176,7 +189,7 @@ async def run_correction(incident_id: str) -> InvestigationRecord:
         return record
 
     os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
-    corr_prompt = f"""Propose a fix for ONE file.
+    corr_prompt = f"""Propose a minimal fix for ONE file.
 
 Diagnostic:
 {record.diagnostic.model_dump_json(indent=2)}
@@ -184,7 +197,9 @@ Diagnostic:
 Investigation:
 {record.investigation_output}
 
-Use propose_patch with the full corrected file content.
+Use propose_patch with the full corrected SQL content.
+Return only the concise fix proposal and the structured patch result.
+Do not repeat the root cause, explanation, evidence, confidence, or test list.
 """
     record.correction_output = await _run_agent(
         correction_agent, corr_prompt, "dbt_correction", f"corr-{incident_id}"

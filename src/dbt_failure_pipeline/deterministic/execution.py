@@ -22,6 +22,8 @@ class DbtRunResult:
 
 def run_dbt_command(command: list[str]) -> DbtRunResult:
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    run_results_path = settings.dbt_dir / "target" / "run_results.json"
+    run_results_path.unlink(missing_ok=True)
     log_path = LOGS_DIR / f"dbt_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.log"
     env = {
         **dict(__import__("os").environ),

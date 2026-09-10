@@ -27,23 +27,28 @@ def propose_patch(
     summary: str,
 ) -> str:
     """Propose a unified diff for a single allowlisted file."""
-    target = (PROJECT_ROOT / file_path).resolve()
+    relative_path = Path(file_path)
+    if relative_path.parts and relative_path.parts[0] in {"models", "tests", "macros"}:
+        target = (settings.dbt_dir / relative_path).resolve()
+    else:
+        target = (PROJECT_ROOT / relative_path).resolve()
     if not _is_allowed(target):
         raise PatchNotAllowedError(f"File {file_path} is not in allowlist")
     if not target.exists():
         return json.dumps({"error": f"File not found: {file_path}"})
 
+    canonical_path = target.relative_to(PROJECT_ROOT).as_posix()
     original = target.read_text(encoding="utf-8")
     diff = difflib.unified_diff(
         original.splitlines(keepends=True),
         patched_content.splitlines(keepends=True),
-        fromfile=file_path,
-        tofile=file_path,
+        fromfile=canonical_path,
+        tofile=canonical_path,
     )
     diff_text = "".join(diff)
     return json.dumps(
         {
-            "file_path": file_path,
+            "file_path": canonical_path,
             "summary": summary,
             "diff_unified": diff_text,
             "original_content": original,
