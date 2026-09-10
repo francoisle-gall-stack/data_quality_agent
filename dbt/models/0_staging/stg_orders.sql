@@ -6,6 +6,5 @@ select
     cast(order_date as date) as order_date,
     status as order_status,
     channel,
-    country_code,
-    missing_column_xyz
+    country_code
 from {{ source('raw', 'raw_orders') }}
