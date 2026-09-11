@@ -5,4 +5,4 @@ expected_root_cause:
   issue: column_removed
   column: email
 expected_fix:
-  file: dbt/models/1_intermediate/int_orders.sql
+  file: dbt/models/2_marts/dim_customers.sql

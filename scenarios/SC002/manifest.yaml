@@ -2,4 +2,3 @@ scenario_id: SC002
 name: Column removed from staging
 patch_files:
   - dbt/models/0_staging/stg_customers.sql
-  - dbt/models/1_intermediate/int_orders.sql
