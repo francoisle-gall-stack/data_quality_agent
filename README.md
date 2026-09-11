@@ -93,6 +93,25 @@ streamlit run src/dq_platform/app/business_dashboard.py   # Dashboard métier
 streamlit run src/dq_platform/app/dq_dashboard.py         # Monitoring DQ
 ```
 
+## MCD interactif des marts
+
+Le MCD des cinq modèles de `dbt/models/2_marts` est généré depuis le manifest dbt :
+
+```bash
+python scripts/render_marts_mcd.py
+```
+
+Le fichier `dbt/target/marts_mcd.html` est autonome. Dans Cursor ou VS Code,
+lance la commande `Simple Browser: Show` puis ouvre ce fichier (ou utilise
+`http://localhost:8765/marts_mcd.html` après avoir démarré
+`python -m http.server 8765 --directory dbt/target`). La vue permet de zoomer,
+déplacer le diagramme, rechercher une table et consulter ses colonnes,
+son grain et ses relations.
+
+Zensical peut servir à publier une documentation contenant une capture ou un
+lien vers ce MCD, mais ce n'est pas le moteur de diagramme interactif. Le HTML
+local est donc la vue d'exploration directement utilisable dans l'IDE.
+
 ## Anomalies injectées
 
 Voir [docs/anomalies.md](docs/anomalies.md) pour la ground truth des 10 anomalies.
