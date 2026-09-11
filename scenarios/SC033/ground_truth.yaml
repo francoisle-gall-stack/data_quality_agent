@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC033
+difficulty_level: 4
+level: adversarial
+error_type: schema_change
+expected_root_cause:
+  model: int_orders
+  issue: downstream_dependency_on_removed_column
+  column: customer_type
+expected_fix:
+  file: dbt/models/0_staging/stg_customers.sql

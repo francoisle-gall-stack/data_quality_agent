@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC032
+difficulty_level: 4
+name: Adversarial safe-looking cast
+level: adversarial
+description: A type-normalization change casts real order identifiers to dates and fails on execution.
+patch_files:
+  - dbt/models/1_intermediate/int_orders.sql

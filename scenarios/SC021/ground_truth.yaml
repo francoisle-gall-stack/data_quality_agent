@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC021
+difficulty_level: 3
+level: alias
+error_type: schema_change
+expected_root_cause:
+  model: int_orders
+  issue: unresolved_alias_column
+  column: customer_segment
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql

@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC014
+difficulty_level: 2
+level: type
+error_type: data_error
+expected_root_cause:
+  model: int_order_revenue
+  issue: incompatible_numeric_operation
+  column: quantity
+expected_fix:
+  file: dbt/models/1_intermediate/int_order_revenue.sql

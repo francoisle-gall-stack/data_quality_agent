@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC028
+difficulty_level: 3
+level: alias
+error_type: schema_change
+expected_root_cause:
+  model: int_orders
+  issue: alias_shadowing
+  column: order_id
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql

@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC019
+difficulty_level: 3
+level: macro
+error_type: sql_compilation
+expected_root_cause:
+  model: int_order_revenue
+  issue: macro_generated_invalid_sql
+  macro: order_revenue_expression
+expected_fix:
+  file: dbt/macros/order_revenue.sql

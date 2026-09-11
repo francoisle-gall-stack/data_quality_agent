@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC024
+difficulty_level: 3
+level: grain
+error_type: dbt_test_failure
+expected_root_cause:
+  model: fct_orders
+  issue: duplicate_order_grain
+  key: order_id
+expected_fix:
+  file: dbt/models/2_marts/fct_orders.sql

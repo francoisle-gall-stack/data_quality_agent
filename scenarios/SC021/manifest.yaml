@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC021
+difficulty_level: 3
+name: Alias mismatch in enriched orders
+level: alias
+description: The intermediate model uses a customer alias that staging does not expose.
+patch_files:
+  - dbt/models/1_intermediate/int_orders.sql

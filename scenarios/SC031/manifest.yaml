@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC031
+difficulty_level: 4
+name: Adversarial commented-out join fix
+level: adversarial
+description: A plausible comment claims a join was fixed, but the executable SQL still references a missing field.
+patch_files:
+  - dbt/models/1_intermediate/int_customer_orders.sql

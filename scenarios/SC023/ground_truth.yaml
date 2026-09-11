@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC023
+difficulty_level: 3
+level: join
+error_type: schema_change
+expected_root_cause:
+  model: int_customer_orders
+  issue: invalid_join_key
+  column: customer_key
+expected_fix:
+  file: dbt/models/1_intermediate/int_customer_orders.sql

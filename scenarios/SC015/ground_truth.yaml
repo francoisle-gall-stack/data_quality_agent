@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC015
+difficulty_level: 2
+level: propagation
+error_type: dbt_test_failure
+expected_root_cause:
+  model: stg_products
+  issue: incompatible_relationship_key_type
+  column: product_id
+expected_fix:
+  file: dbt/models/0_staging/stg_products.sql

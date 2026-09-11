@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC012
+difficulty_level: 2
+level: propagation
+name: Order status renamed upstream
+description: stg_orders exposes status_code while downstream revenue logic still references order_status
+patch_files:
+  - dbt/models/0_staging/stg_orders.sql

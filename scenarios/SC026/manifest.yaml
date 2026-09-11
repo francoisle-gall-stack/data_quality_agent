@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC026
+difficulty_level: 3
+name: Required environment setting missing
+level: environment
+description: The model requires an unset environment variable instead of a safe default.
+patch_files:
+  - dbt/models/2_marts/fct_daily_sales.sql

@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC030
+difficulty_level: 3
+name: Environment-controlled relation is absent
+level: environment
+description: Deployment configuration selects a relation that is unavailable in the current environment.
+patch_files:
+  - dbt/models/2_marts/dim_stores.sql

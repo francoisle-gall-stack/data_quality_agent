@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC033
+difficulty_level: 4
+name: Adversarial upstream column removal
+level: adversarial
+description: A staging cleanup removes a column still required by a downstream model.
+patch_files:
+  - dbt/models/0_staging/stg_customers.sql

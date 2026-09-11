@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC013
+difficulty_level: 2
+level: type
+name: Order date cast receives invalid text
+description: stg_orders introduces an invalid date literal that fails during the staging cast
+patch_files:
+  - dbt/models/0_staging/stg_orders.sql

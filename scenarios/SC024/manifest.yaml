@@ -1,0 +1,9 @@
+schema_version: 2
+scenario_id: SC024
+difficulty_level: 3
+name: Fact grain regression
+level: grain
+description: A deterministic data test detects duplicate order grain in the fact model.
+patch_files:
+  - dbt/models/2_marts/fct_orders.sql
+  - dbt/tests/sc024_fact_grain.sql

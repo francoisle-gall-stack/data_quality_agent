@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC035
+difficulty_level: 4
+name: Adversarial source spelling change
+level: adversarial
+description: A source identifier is changed by one character, producing a missing relation.
+patch_files:
+  - dbt/models/0_staging/stg_products.sql

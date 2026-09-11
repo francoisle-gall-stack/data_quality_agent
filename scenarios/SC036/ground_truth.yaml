@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC036
+difficulty_level: 4
+level: adversarial
+error_type: dbt_test_failure
+expected_root_cause:
+  model: dim_products
+  issue: inverted_price_predicate
+  column: unit_price
+expected_fix:
+  file: dbt/tests/sc036_product_prices.sql

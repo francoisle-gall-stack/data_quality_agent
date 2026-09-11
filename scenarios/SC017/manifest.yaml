@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC017
+difficulty_level: 2
+level: propagation
+name: Order line amount removed upstream
+description: stg_order_items omits line_amount, breaking the revenue aggregation and its downstream fact model
+patch_files:
+  - dbt/models/0_staging/stg_order_items.sql

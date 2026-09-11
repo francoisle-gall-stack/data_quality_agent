@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC032
+difficulty_level: 4
+level: adversarial
+error_type: schema_change
+expected_root_cause:
+  model: int_orders
+  issue: invalid_column_reference
+  column: nonexistent_column
+expected_fix:
+  file: dbt/models/1_intermediate/int_orders.sql

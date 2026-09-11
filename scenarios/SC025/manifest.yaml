@@ -1,0 +1,9 @@
+schema_version: 2
+scenario_id: SC025
+difficulty_level: 3
+name: Filter removes every revenue row
+level: filter
+description: A predicate silently removes the complete order-revenue population.
+patch_files:
+  - dbt/models/1_intermediate/int_order_revenue.sql
+  - dbt/tests/sc025_revenue_not_empty.sql

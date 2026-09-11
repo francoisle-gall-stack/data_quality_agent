@@ -1,0 +1,9 @@
+schema_version: 2
+scenario_id: SC016
+difficulty_level: 2
+level: type
+name: Customer signup timestamp used as date
+description: stg_customers exposes signup_date as a timestamp while the customer dimension enforces date semantics
+patch_files:
+  - dbt/models/0_staging/stg_customers.sql
+  - dbt/tests/scenario_signup_date_type.sql

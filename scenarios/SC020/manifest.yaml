@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC020
+difficulty_level: 3
+level: source
+name: Source table reference drift
+description: stg_products references a source table name that is not declared in the raw source configuration
+patch_files:
+  - dbt/models/0_staging/stg_products.sql

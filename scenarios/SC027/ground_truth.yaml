@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC027
+difficulty_level: 3
+level: git
+error_type: dependency_error
+expected_root_cause:
+  model: dim_customers
+  issue: missing_ref_target
+  ref: branch_only_customer_snapshot
+expected_fix:
+  file: dbt/models/2_marts/dim_customers.sql

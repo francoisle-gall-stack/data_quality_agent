@@ -1,0 +1,9 @@
+schema_version: 2
+scenario_id: SC015
+difficulty_level: 2
+level: propagation
+name: Product key type changed before relationship test
+description: stg_products casts product_id to text, making the product relationship test compare incompatible key types
+patch_files:
+  - dbt/models/0_staging/stg_products.sql
+  - dbt/tests/scenario_product_relationship.sql

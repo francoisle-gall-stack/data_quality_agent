@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC017
+difficulty_level: 2
+level: propagation
+error_type: schema_change
+expected_root_cause:
+  model: stg_order_items
+  issue: column_removed
+  column: line_amount
+expected_fix:
+  file: dbt/models/0_staging/stg_order_items.sql

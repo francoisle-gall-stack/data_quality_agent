@@ -1,0 +1,9 @@
+schema_version: 2
+scenario_id: SC019
+difficulty_level: 3
+level: macro
+name: Macro emits invalid SQL
+description: a scenario macro expands to an invalid expression in the revenue model
+patch_files:
+  - dbt/models/1_intermediate/int_order_revenue.sql
+  - dbt/macros/order_revenue.sql

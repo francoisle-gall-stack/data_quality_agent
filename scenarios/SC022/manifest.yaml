@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC022
+difficulty_level: 3
+name: CTE column escapes its scope
+level: cte
+description: A downstream select references a CTE-only alias that is not visible outside the CTE.
+patch_files:
+  - dbt/models/1_intermediate/int_order_revenue.sql

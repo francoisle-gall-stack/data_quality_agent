@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC030
+difficulty_level: 3
+level: environment
+error_type: config_error
+expected_root_cause:
+  model: dim_stores
+  issue: environment_relation_not_available
+  variable: SC030_SOURCE
+expected_fix:
+  file: dbt/models/2_marts/dim_stores.sql

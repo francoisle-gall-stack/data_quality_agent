@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC011
+difficulty_level: 2
+level: propagation
+name: Customer key removed upstream
+description: stg_customers omits customer_id, propagating a missing key to customer rollups and the customer dimension
+patch_files:
+  - dbt/models/0_staging/stg_customers.sql

@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC034
+difficulty_level: 4
+name: Adversarial macro substitution
+level: adversarial
+description: A refactor calls a macro name that is not installed in the project.
+patch_files:
+  - dbt/models/2_marts/fct_daily_sales.sql

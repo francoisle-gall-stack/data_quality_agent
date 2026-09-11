@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC036
+difficulty_level: 4
+name: Adversarial inverted data test
+level: adversarial
+description: A review-added test uses an inverted predicate and fails on every valid product.
+patch_files:
+  - dbt/tests/sc036_product_prices.sql

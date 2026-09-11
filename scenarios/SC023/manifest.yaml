@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC023
+difficulty_level: 3
+name: Join key renamed upstream
+level: join
+description: Customer rollups join on a key that is absent from the revenue model.
+patch_files:
+  - dbt/models/1_intermediate/int_customer_orders.sql

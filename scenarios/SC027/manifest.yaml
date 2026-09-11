@@ -1,0 +1,8 @@
+schema_version: 2
+scenario_id: SC027
+difficulty_level: 3
+name: Git branch introduces missing ref
+level: git
+description: A branch-only ref points at a model that is not present in the project.
+patch_files:
+  - dbt/models/2_marts/dim_customers.sql

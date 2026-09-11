@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC026
+difficulty_level: 3
+level: environment
+error_type: config_error
+expected_root_cause:
+  model: fct_daily_sales
+  issue: missing_required_environment_variable
+  variable: SC026_REQUIRED
+expected_fix:
+  file: dbt/models/2_marts/fct_daily_sales.sql

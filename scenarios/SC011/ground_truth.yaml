@@ -1,0 +1,11 @@
+schema_version: 2
+scenario_id: SC011
+difficulty_level: 2
+level: propagation
+error_type: schema_change
+expected_root_cause:
+  model: stg_customers
+  issue: column_removed
+  column: customer_id
+expected_fix:
+  file: dbt/models/0_staging/stg_customers.sql
