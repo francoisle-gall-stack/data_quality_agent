@@ -8,7 +8,11 @@ from dbt_failure_pipeline.core.config import PROJECT_ROOT, settings
 from dbt_failure_pipeline.core.exceptions import PatchNotAllowedError
 from dbt_failure_pipeline.core.models import IncidentStatus, InvestigationRecord
 from dbt_failure_pipeline.core.state import load_incident, save_incident
-from dbt_failure_pipeline.deterministic.execution import run_dbt_build, run_dbt_compile, run_dbt_test
+from dbt_failure_pipeline.deterministic.execution import (
+    run_dbt_build,
+    run_dbt_compile,
+    run_dbt_test,
+)
 from dbt_failure_pipeline.github.pr import create_pull_request
 from dbt_failure_pipeline.tools.patch_tools import _is_allowed
 

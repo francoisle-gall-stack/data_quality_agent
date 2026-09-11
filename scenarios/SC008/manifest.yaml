@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC008
+difficulty_level: 2
+level: propagation
 name: Upstream model broken
 patch_files:
   - dbt/models/0_staging/stg_orders.sql

@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC007
+difficulty_level: 1
+level: simple
 name: accepted_values test failure on channel
 patch_files:
   - dbt/tests/scenario_accepted_channel.sql

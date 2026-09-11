@@ -32,11 +32,12 @@ def build_investigation_context() -> InvestigationContext:
         project_root=PROJECT_ROOT,
     )
     git = {
-        node["unique_id"]: load_git_history(
-            node.get("file_path", ""),
+        unique_id: load_git_history(
+            node.get("original_file_path", node.get("file_path", "")),
             project_root=PROJECT_ROOT,
         )
-        for node in failed_nodes
+        for unique_id, node in selected_manifest["nodes"].items()
+        if node.get("original_file_path") or node.get("file_path")
     }
     return InvestigationContext(
         diagnostic=diagnostic,

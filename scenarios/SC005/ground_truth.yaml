@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC005
+difficulty_level: 1
+level: simple
 error_type: dbt_test_failure
 expected_root_cause:
   model: stg_orders

@@ -169,6 +169,12 @@ Do not propose a patch.
             investigation_agent, inv_prompt, "dbt_investigation", f"inv-{incident_id}"
         )
         record.rca = _build_rca_from_investigation(record.investigation_output)
+        record.failures = []
+        for node in diagnostic.failed_nodes:
+            failure_rca = record.rca.model_dump()
+            failure_rca["error_type"] = node.category or classify_diagnostic(diagnostic).value
+            failure_rca["affected_models"] = [node.unique_id]
+            record.failures.append(RootCauseAnalysis(**failure_rca))
 
     record.status = IncidentStatus.INVESTIGATED
     save_incident(record)
@@ -206,6 +212,7 @@ Do not repeat the root cause, explanation, evidence, confidence, or test list.
         correction_agent, corr_prompt, "dbt_correction", f"corr-{incident_id}"
     )
     record.patch = _parse_patch_from_output(record.correction_output)
+    record.patches = [record.patch] if record.patch else []
     record.status = (
         IncidentStatus.AWAITING_APPROVAL if record.patch else IncidentStatus.NEEDS_HUMAN
     )

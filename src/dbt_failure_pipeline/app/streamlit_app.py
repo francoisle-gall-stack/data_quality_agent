@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import difflib
 import html
-import json
 import uuid
 
 import streamlit as st

@@ -6,7 +6,7 @@ import uuid
 
 from dbt_failure_pipeline.core.models import IncidentStatus, InvestigationRecord
 from dbt_failure_pipeline.core.state import save_incident, set_current_incident_id
-from dbt_failure_pipeline.deterministic import run_diagnostic, run_dbt_build
+from dbt_failure_pipeline.deterministic import run_dbt_build, run_diagnostic
 from dbt_failure_pipeline.scenarios.manager import activate_scenario, reset_scenario
 
 

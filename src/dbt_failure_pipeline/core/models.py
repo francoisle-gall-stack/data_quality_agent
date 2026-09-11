@@ -37,12 +37,31 @@ class FailedNode(BaseModel):
     node_name: str
     file_path: str = ""
     error_message: str | None = None
+    status: str = "error"
+    category: str | None = None
+
+
+class FailureDetail(BaseModel):
+    """Normalized failure entry for multi-failure diagnostics."""
+
+    id: str
+    node_type: str
+    unique_id: str
+    node_name: str
+    status: str = "error"
+    category: str | None = None
+    file_path: str = ""
+    error_message: str | None = None
 
 
 class DbtDiagnostic(BaseModel):
     command_executed: str
     has_errors: bool
     failed_nodes: list[FailedNode] = Field(default_factory=list)
+    schema_version: int = 2
+    run_id: str | None = None
+    scenario_id: str | None = None
+    failures: list[FailureDetail] = Field(default_factory=list)
 
     @property
     def primary_failed_node(self) -> FailedNode | None:
@@ -88,6 +107,8 @@ class InvestigationRecord(BaseModel):
     diagnostic: DbtDiagnostic
     rca: RootCauseAnalysis | None = None
     patch: ProposedPatch | None = None
+    patches: list[ProposedPatch] = Field(default_factory=list)
+    failures: list[RootCauseAnalysis] = Field(default_factory=list)
     investigation_output: str = ""
     correction_output: str = ""
     validation_passed: bool | None = None

@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC010
+difficulty_level: 3
+level: complex
 name: Transformation filter excludes valid status
 patch_files:
   - dbt/models/1_intermediate/int_order_revenue.sql

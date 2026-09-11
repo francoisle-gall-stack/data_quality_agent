@@ -62,6 +62,34 @@ def load_filtered_manifest(
     downstream_models = sorted((downstream_ids & model_ids) - set(failed_ids))
     failed_model_ids = sorted(set(failed_ids) & model_ids)
 
+    def distances(start_id: str, graph: dict[str, list[str]]) -> dict[str, int]:
+        result: dict[str, int] = {}
+        pending = [(start_id, 0)]
+        while pending:
+            node_id, distance = pending.pop(0)
+            if node_id in result and result[node_id] <= distance:
+                continue
+            result[node_id] = distance
+            pending.extend((child, distance + 1) for child in graph.get(node_id, []))
+        return result
+
+    lineage_by_failure = {}
+    for failed_id in failed_ids:
+        upstream = distances(failed_id, parents)
+        downstream = distances(failed_id, children)
+        lineage_by_failure[failed_id] = {
+            "upstream": [
+                {"unique_id": node_id, "lineage_level": -distance}
+                for node_id, distance in sorted(upstream.items())
+                if node_id != failed_id and node_id in model_ids
+            ],
+            "downstream": [
+                {"unique_id": node_id, "lineage_level": distance}
+                for node_id, distance in sorted(downstream.items())
+                if node_id != failed_id and node_id in model_ids
+            ],
+        }
+
     compact_nodes = {}
     for node_id in sorted(selected_ids):
         node = all_nodes[node_id]
@@ -91,5 +119,6 @@ def load_filtered_manifest(
             "downstream_models": downstream_models,
             "upstream_model_count": len(upstream_models),
             "downstream_model_count": len(downstream_models),
+            "by_failure": lineage_by_failure,
         },
     }

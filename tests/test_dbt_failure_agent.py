@@ -7,12 +7,17 @@ import pytest
 from dbt_failure_pipeline.core.config import settings
 from dbt_failure_pipeline.core.exceptions import PatchNotAllowedError
 from dbt_failure_pipeline.core.models import ErrorCategory
-from dbt_failure_pipeline.deterministic.diagnostic import extract_dbt_errors, run_diagnostic
+from dbt_failure_pipeline.deterministic.diagnostic import (
+    extract_dbt_error_text,
+    extract_dbt_errors,
+    run_diagnostic,
+)
 from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 from dbt_failure_pipeline.deterministic.investigation.context.manifest import (
     load_filtered_manifest,
 )
 from dbt_failure_pipeline.evaluation.classification import classify_error
+from dbt_failure_pipeline.evaluation.metrics import classifications_match, failure_count_match
 from dbt_failure_pipeline.tools.model_tools import get_dbt_model
 from dbt_failure_pipeline.tools.patch_tools import propose_patch
 
@@ -222,3 +227,47 @@ def test_run_diagnostic_writes_file(tmp_path, monkeypatch):
 
     assert run_diagnostic().has_errors
     assert (target_dir / "diagnostic.json").exists()
+
+
+def test_multi_failure_diagnostic_is_order_insensitive(tmp_path):
+    run_results_path = tmp_path / "run_results.json"
+    run_results_path.write_text(
+        json.dumps(
+            {
+                "args": {"invocation_command": "dbt build"},
+                "results": [
+                    {
+                        "unique_id": "test.project.orders_unique",
+                        "status": "fail",
+                        "message": "Got 2 results, configured to fail if != 0",
+                    },
+                    {
+                        "unique_id": "model.project.orders",
+                        "status": "error",
+                        "message": "Binder Error: Referenced column missing not found",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    diagnostic = extract_dbt_errors(run_results_path)
+
+    ground_truth = {
+        "failures": [
+            {"classification": {"error_type": "schema_change"}},
+            {"classification": {"error_type": "dbt_test_failure"}},
+        ]
+    }
+    assert len(diagnostic.failures) == 2
+    assert failure_count_match(diagnostic, ground_truth)
+    assert classifications_match(diagnostic, ground_truth)
+
+
+def test_diagnostic_fallback_handles_pre_run_compilation_error():
+    diagnostic = extract_dbt_error_text(
+        "Compilation Error\nEnv var required but not provided: 'SC026_REQUIRED'"
+    )
+
+    assert diagnostic.has_errors
+    assert diagnostic.failures[0].category == ErrorCategory.CONFIG_ERROR.value

@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC009
+difficulty_level: 1
+level: simple
 name: SQL syntax error
 patch_files:
   - dbt/models/1_intermediate/int_orders.sql

@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC004
+difficulty_level: 1
+level: simple
 name: not_null test failure on customer_id
 patch_files:
   - dbt/tests/scenario_not_null_customer.sql

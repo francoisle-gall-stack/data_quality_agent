@@ -5,12 +5,22 @@ from __future__ import annotations
 from dbt_failure_pipeline.core.models import DbtDiagnostic, ErrorCategory
 
 
+def normalize_error_type(error_type: str) -> str:
+    """Normalize scenario aliases to the canonical error categories."""
+    aliases = {
+        "compilation_error": ErrorCategory.SQL_COMPILATION.value,
+        "database_error": ErrorCategory.DATA_ERROR.value,
+        "test_failure": ErrorCategory.DBT_TEST_FAILURE.value,
+    }
+    return aliases.get(error_type, error_type)
+
+
 def classify_error(message: str) -> ErrorCategory:
     """Classify a dbt error message into a category."""
     lower = message.lower()
     if any(x in lower for x in ["locked", "permission", "io error", "cannot open file"]):
         return ErrorCategory.INFRASTRUCTURE
-    if any(x in lower for x in ["profiles.yml", "dbt_profile", "env_var"]):
+    if any(x in lower for x in ["profiles.yml", "dbt_profile", "env_var", "env var required"]):
         return ErrorCategory.CONFIG_ERROR
     if "configured to fail" in lower or ("got" in lower and "result" in lower):
         return ErrorCategory.DBT_TEST_FAILURE
@@ -19,7 +29,7 @@ def classify_error(message: str) -> ErrorCategory:
     if any(
         x in lower
         for x in ["not found", "does not exist", "referenced column", "does not have a column"]
-    ) and any(x in lower for x in ["column", "table", "field", "named"]):
+    ) and any(x in lower for x in ["column", "table", "field"]):
         return ErrorCategory.SCHEMA_CHANGE
     if any(x in lower for x in ["depends on", "upstream", "skipped due to"]):
         return ErrorCategory.DEPENDENCY_ERROR
@@ -44,6 +54,8 @@ def classify_error(message: str) -> ErrorCategory:
             "catalog error",
             "catalog exception",
             "invalid function",
+            "compilation error",
+            "macro",
         ]
     ):
         return ErrorCategory.SQL_COMPILATION

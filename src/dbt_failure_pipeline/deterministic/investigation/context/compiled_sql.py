@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+
 def _repo_relative(path: Path, project_root: Path) -> str:
     """Convertit un chemin absolu en chemin relatif au dépôt."""
     try:

@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC006
+difficulty_level: 1
+level: simple
 name: relationships test failure
 patch_files:
   - dbt/tests/scenario_relationships_product.sql

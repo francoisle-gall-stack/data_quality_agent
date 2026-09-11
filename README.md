@@ -140,7 +140,9 @@ dbt-eval-scenarios                   # Évalue SC001–SC010 (classification, sa
 dbt-reset-scenario                 # Restaure le baseline dbt
 ```
 
-Scénarios reproductibles : `scenarios/SC001` … `SC010` avec ground truth YAML.
+Scénarios reproductibles : `scenarios/SC001` … `SC036` avec ground truth YAML.
+La taxonomie par difficulté et la matrice complète sont décrites dans
+[docs/dbt_failure_scenarios.md](docs/dbt_failure_scenarios.md).
 
 ## Agent investigation (DQ platform)
 

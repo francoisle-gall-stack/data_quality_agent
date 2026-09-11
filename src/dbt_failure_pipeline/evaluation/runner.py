@@ -10,9 +10,19 @@ import uuid
 import yaml
 
 from dbt_failure_pipeline.core.config import SCENARIOS_DIR
-from dbt_failure_pipeline.deterministic import run_diagnostic, run_dbt_build
+from dbt_failure_pipeline.deterministic import (
+    run_dbt_build,
+    run_diagnostic,
+)
+from dbt_failure_pipeline.deterministic.diagnostic import extract_dbt_error_text
 from dbt_failure_pipeline.evaluation.classification import classify_diagnostic
-from dbt_failure_pipeline.evaluation.metrics import classification_match, root_cause_file_match
+from dbt_failure_pipeline.evaluation.metrics import (
+    classification_match,
+    classifications_match,
+    expected_fix_files_match,
+    failure_count_match,
+    root_cause_file_match,
+)
 from dbt_failure_pipeline.orchestration.pipeline import run_investigation
 from dbt_failure_pipeline.scenarios.manager import activate_scenario, list_scenarios, reset_scenario
 
@@ -30,18 +40,34 @@ async def evaluate_scenario(scenario_id: str, use_agents: bool = False) -> dict:
         reset_scenario()
         return {"scenario_id": scenario_id, "failed": True, "reason": "dbt build succeeded"}
 
-    diagnostic = run_diagnostic()
+    run_results_path = SCENARIOS_DIR.parent / "dbt" / "target" / "run_results.json"
+    if run_results_path.exists():
+        diagnostic = run_diagnostic()
+    else:
+        diagnostic = extract_dbt_error_text(
+            f"{build.stdout}\n{build.stderr}",
+            command_executed=build.command,
+            output_path=SCENARIOS_DIR.parent / "dbt" / "target" / "diagnostic.json",
+        )
+    diagnostic.scenario_id = scenario_id
     if not diagnostic.has_errors:
         reset_scenario()
-        return {"scenario_id": scenario_id, "failed": True, "reason": "no errors in run_results"}
+        return {"scenario_id": scenario_id, "failed": True, "reason": "no errors in diagnostic"}
 
     incident_id = f"INC-{uuid.uuid4().hex[:8].upper()}"
     gt = _load_ground_truth(scenario_id)
     result = {
         "scenario_id": scenario_id,
         "incident_id": incident_id,
+        "level": gt.get("level"),
         "error_category": classify_diagnostic(diagnostic).value,
-        "classification_match": classification_match(diagnostic, gt.get("error_type", "")),
+        "failure_count_match": failure_count_match(diagnostic, gt),
+        "classifications_match": classifications_match(diagnostic, gt),
+        "classification_match": (
+            classifications_match(diagnostic, gt)
+            if gt.get("failures")
+            else classification_match(diagnostic, gt.get("error_type", ""))
+        ),
     }
 
     if use_agents:
@@ -59,6 +85,7 @@ async def evaluate_scenario(scenario_id: str, use_agents: bool = False) -> dict:
         result["root_cause_file_match"] = root_cause_file_match(
             record, gt.get("expected_fix", {}).get("file", "")
         )
+        result["expected_fix_files_match"] = expected_fix_files_match(record, gt)
         result["status"] = record.status.value
 
     reset_scenario()
@@ -68,7 +95,17 @@ async def evaluate_scenario(scenario_id: str, use_agents: bool = False) -> dict:
 async def run_all(use_agents: bool = False) -> list[dict]:
     results = []
     for sid in list_scenarios():
-        results.append(await evaluate_scenario(sid, use_agents=use_agents))
+        try:
+            results.append(await evaluate_scenario(sid, use_agents=use_agents))
+        except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as exc:
+            reset_scenario()
+            results.append(
+                {
+                    "scenario_id": sid,
+                    "failed": True,
+                    "reason": f"{type(exc).__name__}: {exc}",
+                }
+            )
     return results
 
 
@@ -84,7 +121,11 @@ def main() -> None:
         results = asyncio.run(run_all(use_agents=args.use_agents))
 
     print(json.dumps(results, indent=2))
-    passed = sum(1 for r in results if r.get("classification_match"))
+    passed = sum(
+        1
+        for r in results
+        if r.get("failure_count_match") and r.get("classifications_match")
+    )
     print(f"\nClassification match: {passed}/{len(results)}")
 
 

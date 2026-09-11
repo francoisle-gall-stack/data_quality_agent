@@ -1,4 +1,7 @@
+schema_version: 2
 scenario_id: SC010
+difficulty_level: 3
+level: complex
 error_type: schema_change
 expected_root_cause:
   model: int_order_revenue
