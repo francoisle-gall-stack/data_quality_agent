@@ -195,20 +195,6 @@ if incident_id:
         st.json(record.diagnostic.model_dump())
 
     with st.expander("Investigation", expanded=True):
-        lineage = record.metadata.get("lineage", {})
-        upstream_count = lineage.get("upstream_model_count", 0)
-        downstream_count = lineage.get("downstream_model_count", 0)
-        lc1, lc2 = st.columns(2)
-        lc1.metric("Upstream models", upstream_count)
-        lc2.metric("Downstream models", downstream_count)
-        with st.expander("Lineage details", expanded=False):
-            st.json(
-                {
-                    "failed_models": lineage.get("failed_models", []),
-                    "upstream_models": lineage.get("upstream_models", []),
-                    "downstream_models": lineage.get("downstream_models", []),
-                }
-            )
         st.write(record.investigation_output or "(not run)")
 
     with st.expander("Proposed patch", expanded=True):
