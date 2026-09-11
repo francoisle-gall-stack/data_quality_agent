@@ -17,11 +17,8 @@ def classification_match(diagnostic: DbtDiagnostic, expected_type: str) -> bool:
 
 
 def _observed_categories(diagnostic: DbtDiagnostic) -> list[str]:
-    if diagnostic.failures:
-        return [f.category for f in diagnostic.failures if f.category]
     return [
-        node.category
-        or classify_diagnostic(
+        classify_diagnostic(
             DbtDiagnostic(
                 command_executed=diagnostic.command_executed,
                 has_errors=True,

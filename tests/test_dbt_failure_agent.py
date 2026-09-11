@@ -259,7 +259,7 @@ def test_multi_failure_diagnostic_is_order_insensitive(tmp_path):
             {"classification": {"error_type": "dbt_test_failure"}},
         ]
     }
-    assert len(diagnostic.failures) == 2
+    assert len(diagnostic.failed_nodes) == 2
     assert failure_count_match(diagnostic, ground_truth)
     assert classifications_match(diagnostic, ground_truth)
 
@@ -270,4 +270,4 @@ def test_diagnostic_fallback_handles_pre_run_compilation_error():
     )
 
     assert diagnostic.has_errors
-    assert diagnostic.failures[0].category == ErrorCategory.CONFIG_ERROR.value
+    assert diagnostic.failed_nodes[0].error_message.startswith("Compilation Error")

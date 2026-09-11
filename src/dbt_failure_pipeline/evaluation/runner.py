@@ -49,7 +49,6 @@ async def evaluate_scenario(scenario_id: str, use_agents: bool = False) -> dict:
             command_executed=build.command,
             output_path=SCENARIOS_DIR.parent / "dbt" / "target" / "diagnostic.json",
         )
-    diagnostic.scenario_id = scenario_id
     if not diagnostic.has_errors:
         reset_scenario()
         return {"scenario_id": scenario_id, "failed": True, "reason": "no errors in diagnostic"}

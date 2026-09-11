@@ -172,7 +172,7 @@ Do not propose a patch.
         record.failures = []
         for node in diagnostic.failed_nodes:
             failure_rca = record.rca.model_dump()
-            failure_rca["error_type"] = node.category or classify_diagnostic(diagnostic).value
+            failure_rca["error_type"] = classify_diagnostic(diagnostic).value
             failure_rca["affected_models"] = [node.unique_id]
             record.failures.append(RootCauseAnalysis(**failure_rca))
 
