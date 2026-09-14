@@ -32,14 +32,10 @@ from dbt_failure_pipeline.observability.langfuse_setup import (
 )
 
 _SOURCE_DATA_MARKERS = (
-    "source data issue",
-    "referential integrity",
-    "orphan",
-    "non-existent product",
-    "missing source record",
-    "catalog",
-    "synchronization issue",
-    "sync issue",
+    "source data issue:",
+    "source-data issue:",
+    "source data correction is required",
+    "source-data correction is required",
 )
 
 

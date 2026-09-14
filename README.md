@@ -144,6 +144,26 @@ Scénarios reproductibles : `scenarios/SC001` … `SC036` avec ground truth YAML
 La taxonomie par difficulté et la matrice complète sont décrites dans
 [docs/dbt_failure_scenarios.md](docs/dbt_failure_scenarios.md).
 
+### Règles de décision pour les corrections
+
+Une erreur de qualité de données ou de référentiel ne bloque pas automatiquement
+la proposition d'un patch dbt. L'agent vérifie d'abord si une correction SQL
+locale est démontrable, sans inventer de données ni modifier la sémantique
+métier. Cela couvre par exemple une fonction invalide, une colonne cassée mais
+inutile, un alias incorrect ou une transformation SQL clairement erronée.
+
+L'agent classe un incident comme `Source data issue` uniquement lorsque les
+preuves montrent que des enregistrements sources nécessaires sont absents, que
+la source est incomplète ou désynchronisée, ou qu'une décision du propriétaire
+de la source est nécessaire. Dans ce cas, il ne propose pas de modification de
+modèle dbt, recommande une correction de la source ou une revue humaine et
+place l'incident en `needs_human`.
+
+Un simple échec de test `relationships`, `not_null` ou de qualité des données
+ne suffit donc pas à déclencher ce blocage. L'investigation doit expliquer
+pourquoi une transformation dbt ne peut pas corriger le problème avant de
+refuser un patch.
+
 ## Agent investigation (DQ platform)
 
 Configurer `.env` (copier depuis `.env.example`) :

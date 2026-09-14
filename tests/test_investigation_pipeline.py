@@ -17,7 +17,10 @@ from dbt_failure_pipeline.orchestration import pipeline
 
 def test_source_data_issue_requires_human_review():
     assert pipeline._is_source_data_issue(
-        "Source data issue: orphan product_id values indicate a referential integrity problem."
+        "Source data issue: required product records are absent from the catalog."
+    )
+    assert not pipeline._is_source_data_issue(
+        "The test found orphan product_id values and a referential integrity problem."
     )
     assert not pipeline._is_source_data_issue(
         "The model has a missing column caused by an incorrect ref()."

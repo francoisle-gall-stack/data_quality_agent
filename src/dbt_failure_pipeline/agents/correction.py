@@ -14,11 +14,13 @@ source SQL. Preserve its Jinja, ref(), source(), and config expressions. Then ca
 propose_patch with file_path, the complete corrected source SQL, and summary.
 
 Rules:
-- If the investigation identifies a SOURCE DATA ISSUE (for example missing source
-  records, orphan foreign keys, referential-integrity violations, or a catalog/sync
-  problem), do not call get_dbt_model or propose_patch. Return a concise statement
-  that no model patch is justified and that source data correction or human review
-  is required.
+- Only when the investigation conclusion explicitly starts with "Source data issue:"
+  or clearly states that source-data correction is required, do not call
+  get_dbt_model or propose_patch. Return a concise statement that no model patch
+  is justified and that source data correction or human review is required.
+- A generic referential-integrity or data-quality test failure is not enough to
+  block a patch. If the evidence supports a deterministic model correction,
+  propose it.
 - Only modify ONE file per incident
 - Only files under dbt/models/, dbt/tests/, dbt/macros/
 - Minimal targeted fix — do not refactor unrelated code
