@@ -20,6 +20,10 @@ def test_source_data_issue_requires_human_review():
         "Source data issue: required product records are absent from the catalog."
     )
     assert not pipeline._is_source_data_issue(
+        "The investigation considered a source data issue, but the missing macro "
+        "is a deterministic model error."
+    )
+    assert not pipeline._is_source_data_issue(
         "The test found orphan product_id values and a referential integrity problem."
     )
     assert not pipeline._is_source_data_issue(

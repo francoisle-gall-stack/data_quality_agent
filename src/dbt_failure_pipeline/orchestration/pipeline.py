@@ -120,9 +120,16 @@ def _build_rca_from_investigation(output: str) -> RootCauseAnalysis:
 
 
 def _is_source_data_issue(output: str) -> bool:
-    """Detect an investigation conclusion that requires source-data review."""
-    normalized = output.lower()
-    return any(marker in normalized for marker in _SOURCE_DATA_MARKERS)
+    """Detect an explicit source-data conclusion, not incidental mentions."""
+    for line in output.splitlines():
+        normalized = line.strip().lower()
+        if normalized.startswith(_SOURCE_DATA_MARKERS):
+            return True
+        if "conclusion:" in normalized:
+            conclusion = normalized.split("conclusion:", 1)[1].strip()
+            if conclusion.startswith(_SOURCE_DATA_MARKERS):
+                return True
+    return False
 
 
 async def run_investigation(incident_id: str) -> InvestigationRecord:

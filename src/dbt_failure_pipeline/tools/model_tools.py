@@ -32,3 +32,29 @@ def get_dbt_model(model: str) -> str:
             "sql": path.read_text(encoding="utf-8"),
         }
     )
+
+
+def get_dbt_macro(macro: str) -> str:
+    """Return the file path and source SQL for a dbt macro."""
+    macro_name = Path(macro).stem
+    matches = list((settings.dbt_dir / "macros").rglob(f"{macro_name}.sql"))
+
+    if not matches:
+        return json.dumps({"error": f"Macro file {macro_name}.sql not found"})
+    if len(matches) > 1:
+        return json.dumps(
+            {
+                "error": f"Multiple macro files named {macro_name}.sql found",
+                "matches": [
+                    path.relative_to(settings.dbt_dir).as_posix() for path in matches
+                ],
+            }
+        )
+
+    path = matches[0]
+    return json.dumps(
+        {
+            "path": path.relative_to(settings.dbt_dir.parent).as_posix(),
+            "sql": path.read_text(encoding="utf-8"),
+        }
+    )

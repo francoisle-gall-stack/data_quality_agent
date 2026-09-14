@@ -89,7 +89,7 @@ dans un modèle dépendant.
 | SC015 | 2 | Product key type changed before relationship test | `stg_products.sql`, `scenario_product_relationship.sql` | `product_id` est casté en texte, ce qui casse la relation avec les clés amont | Harmoniser le type de clé dans les deux relations |
 | SC016 | 2 | Customer signup timestamp used as date | `stg_customers.sql`, `scenario_signup_date_type.sql` | `signup_date` est produit comme `TIMESTAMP` alors que le test attend `DATE` | Caster `signup_date` en `DATE` |
 | SC017 | 2 | Order line amount removed upstream | `stg_order_items.sql` | `line_amount` est absent de la projection des lignes de commande | Restaurer `line_amount` dans le staging |
-| SC018 | 3 | Missing revenue macro | `int_order_revenue.sql` | Appel à la macro/fonction inexistante `calculate_order_revenue` | Utiliser la macro existante ou une expression SQL valide |
+| SC018 | 3 | Missing revenue macro | `int_order_revenue.sql` | Appel à la macro/fonction inexistante `calculate_order_revenue` | Remplacer l'appel par `oi.line_amount * oi.quantity`, en conservant l'agrégation attendue |
 | SC019 | 3 | Macro emits invalid SQL | `int_order_revenue.sql`, `order_revenue.sql` | La macro génère une expression terminée par `+` | Corriger la macro pour produire une expression SQL complète |
 | SC020 | 3 | Source table reference drift | `stg_products.sql` | La source référence `raw_product` au lieu de la relation déclarée | Utiliser le nom de source déclaré, `raw_products` |
 | SC021 | 3 | Alias mismatch in enriched orders | `int_orders.sql` | Le modèle sélectionne `c.customer_segment`, colonne non disponible dans le staging | Référencer `c.customer_type` ou créer explicitement l'alias |

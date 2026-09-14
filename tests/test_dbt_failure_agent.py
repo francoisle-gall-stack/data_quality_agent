@@ -18,7 +18,7 @@ from dbt_failure_pipeline.deterministic.investigation.context.manifest import (
 )
 from dbt_failure_pipeline.evaluation.classification import classify_error
 from dbt_failure_pipeline.evaluation.metrics import classifications_match, failure_count_match
-from dbt_failure_pipeline.tools.model_tools import get_dbt_model
+from dbt_failure_pipeline.tools.model_tools import get_dbt_macro, get_dbt_model
 from dbt_failure_pipeline.tools.patch_tools import propose_patch
 
 
@@ -58,6 +58,22 @@ def test_get_dbt_model_returns_source_sql(tmp_path, monkeypatch):
 
     assert result["path"] == "dbt/models/intermediate/orders.sql"
     assert result["sql"] == "select * from {{ ref('stg_orders') }}"
+
+
+def test_get_dbt_macro_returns_source_sql(tmp_path, monkeypatch):
+    dbt_dir = tmp_path / "dbt"
+    macro_path = dbt_dir / "macros" / "order_revenue.sql"
+    macro_path.parent.mkdir(parents=True)
+    macro_path.write_text(
+        "{% macro order_revenue_expression(a, b) %}{{ a }} * {{ b }}{% endmacro %}",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings, "dbt_dir", dbt_dir)
+
+    result = json.loads(get_dbt_macro("order_revenue"))
+
+    assert result["path"] == "dbt/macros/order_revenue.sql"
+    assert "order_revenue_expression" in result["sql"]
 
 
 def test_filtered_manifest_contains_transitive_lineage_for_multiple_failures(tmp_path):
