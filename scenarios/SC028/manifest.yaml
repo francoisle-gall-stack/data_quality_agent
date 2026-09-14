@@ -1,7 +1,7 @@
 schema_version: 2
 scenario_id: SC028
 difficulty_level: 3
-name: Alias shadow changes selected column
+name: Wrong table alias in selected order column
 level: alias
 description: A reused alias hides the intended order column and causes an invalid reference.
 patch_files:

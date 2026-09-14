@@ -14,7 +14,7 @@ Ces informations servent à l'évaluation de l'agent et à la compréhension du 
 | ANO-007 | dimension_missing | 2026-08-15 → 2026-08-31 | raw_orders | country_code | DE mal tagué / filtré | Allemagne absente des commandes |
 | ANO-008 | outliers | 2026-08-11 | raw_order_items | line_amount | Bug moteur de prix | Montants > 50 000 EUR |
 | ANO-009 | referential_integrity | 2026-08-18 → 2026-08-20 | raw_order_items | product_id | Catalogue produit désynchronisé | ~5 % product_id orphelins |
-| ANO-010 | dbt_transformation_error | 2026-08-20 → 2026-08-31 | int_order_revenue | order_status | Filtre WHERE trop restrictif dans `int_order_revenue.sql` | Statut `confirmed` exclu en aval |
+| ANO-010 | dbt_transformation_error | scénario SC010 | int_order_revenue | order_revenu | Référence à une colonne inexistante dans le filtre du modèle | Échec de compilation dbt ; aucun résultat fiable en aval |
 
 ## Détail par anomalie
 
@@ -45,15 +45,28 @@ Les commandes ne sont plus taguées `DE` ; réattribuées à d'autres pays.
 ### ANO-009 — Clés étrangères invalides (18–20 août)
 ~5 % des lignes référencent un `product_id` inexistant (P9000–P9999).
 
-### ANO-010 — Erreur de transformation dbt (à partir du 20 août)
-Dans [`dbt/models/intermediate/int_order_revenue.sql`](../dbt/models/intermediate/int_order_revenue.sql), les commandes `confirmed` à partir du 2026-08-20 sont exclues par :
+### ANO-010 — Erreur de référence de colonne dans dbt (SC010)
+Le scénario [`SC010`](../scenarios/SC010/manifest.yaml) injecte une erreur dans
+[`dbt/models/1_intermediate/int_order_revenue.sql`](../dbt/models/1_intermediate/int_order_revenue.sql).
+Le filtre référence `o.order_revenu`, alors que cette colonne n'existe pas dans
+`stg_orders` :
 
 ```sql
-and (
-    o.order_date < cast('2026-08-20' as date)
-    or o.order_status != 'confirmed'
-)
+and o.order_revenu > 0
 ```
+
+Le modèle doit être corrigé en utilisant une expression valide sur le montant
+agrégé, par exemple `having sum(oi.line_amount) > 0` après le `group by`, ou en
+supprimant ce filtre si la règle métier ne l'exige pas. La correction ne doit
+pas supprimer le statut `confirmed` du filtre :
+
+```sql
+where o.order_status in ('completed', 'confirmed', 'shipped')
+```
+
+L'erreur est donc une `invalid_column_reference` détectée à la compilation dbt,
+et non une anomalie de données source. Le fichier autorisé par le scénario pour
+la correction est `dbt/models/1_intermediate/int_order_revenue.sql`.
 
 ## Fichiers de référence
 
