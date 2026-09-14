@@ -15,6 +15,15 @@ from dbt_failure_pipeline.core.state import save_incident
 from dbt_failure_pipeline.orchestration import pipeline
 
 
+def test_source_data_issue_requires_human_review():
+    assert pipeline._is_source_data_issue(
+        "Source data issue: orphan product_id values indicate a referential integrity problem."
+    )
+    assert not pipeline._is_source_data_issue(
+        "The model has a missing column caused by an incorrect ref()."
+    )
+
+
 @pytest.mark.asyncio
 async def test_investigation_only_makes_one_llm_call(monkeypatch):
     record = InvestigationRecord(

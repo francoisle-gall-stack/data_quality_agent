@@ -31,6 +31,17 @@ from dbt_failure_pipeline.observability.langfuse_setup import (
     trace_context,
 )
 
+_SOURCE_DATA_MARKERS = (
+    "source data issue",
+    "referential integrity",
+    "orphan",
+    "non-existent product",
+    "missing source record",
+    "catalog",
+    "synchronization issue",
+    "sync issue",
+)
+
 
 async def _run_agent(agent, message: str, app_name: str, session_id: str) -> str:
     session_service = InMemorySessionService()
@@ -112,6 +123,12 @@ def _build_rca_from_investigation(output: str) -> RootCauseAnalysis:
     )
 
 
+def _is_source_data_issue(output: str) -> bool:
+    """Detect an investigation conclusion that requires source-data review."""
+    normalized = output.lower()
+    return any(marker in normalized for marker in _SOURCE_DATA_MARKERS)
+
+
 async def run_investigation(incident_id: str) -> InvestigationRecord:
     langfuse_enabled = setup_langfuse()
     record = load_incident(incident_id)
@@ -176,7 +193,17 @@ Do not propose a patch.
             failure_rca["affected_models"] = [node.unique_id]
             record.failures.append(RootCauseAnalysis(**failure_rca))
 
-    record.status = IncidentStatus.INVESTIGATED
+    if _is_source_data_issue(record.investigation_output):
+        record.rca.requires_human_intervention = True
+        record.metadata["source_data_issue"] = True
+        record.correction_output = (
+            "Source data issue: source records or relationships are inconsistent. "
+            "No dbt model modification is justified by the available evidence; "
+            "source-data correction or human/business review is required."
+        )
+        record.status = IncidentStatus.NEEDS_HUMAN
+    else:
+        record.status = IncidentStatus.INVESTIGATED
     save_incident(record)
     flush_langfuse()
     return record
@@ -185,6 +212,14 @@ Do not propose a patch.
 async def run_correction(incident_id: str) -> InvestigationRecord:
     """Ask the correction agent for a patch after investigation is reviewed."""
     record = load_incident(incident_id)
+    if record.metadata.get("source_data_issue"):
+        record.status = IncidentStatus.NEEDS_HUMAN
+        record.correction_output = (
+            "Source data issue: no model patch will be proposed. "
+            "Source-data correction or human/business review is required."
+        )
+        save_incident(record)
+        return record
     if not record.rca or record.status != IncidentStatus.INVESTIGATED:
         record.status = IncidentStatus.NEEDS_HUMAN
         save_incident(record)
