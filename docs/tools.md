@@ -40,6 +40,21 @@ collecte calculée à partir de la catégorie et du message d'erreur.
 `get_dbt_diagnostic` n'est donc pas rappelé par le Context Agent : cela
 dupliquerait le même artefact sans apporter de preuve supplémentaire.
 
+### Règle d'appel
+
+Un tool est appelé uniquement s'il est requis par la politique ou si un résultat
+précédent révèle une preuve manquante précise. Les tools non justifiés sont
+interdits, et chaque appel est enregistré dans `sources_used` avec sa justification
+dans `tool_reasons`.
+
+Par exemple, pour une colonne manquante ou renommée :
+
+- `get_dbt_manifest` est requis pour vérifier la lineage ;
+- `get_dbt_compiled_sql` est requis pour confirmer le SQL réellement exécuté ;
+- `get_dbt_git_history` est requis pour rechercher une régression ;
+- `get_dbt_models` ne charge que le modèle en erreur et les upstream pertinents ;
+- `get_dbt_macros` n'est pas appelé, sauf signal explicite Jinja/macro.
+
 ### Cas où aucun tool n'est appelé
 
 Le pipeline ne lance pas le `Context Agent` pour les erreurs classées
@@ -194,3 +209,26 @@ Ils ne font pas partie de la construction du contexte initial :
 
 Ces tools sont utilisés après l'investigation, lorsque le correctif doit être
 préparé et soumis à l'approbation humaine.
+
+## Mode business du Context Agent
+
+Le dashboard React appelle `POST /api/chat` avec une question et un
+`dashboard_context` (graphique, filtres et anomalie sélectionnée). Le routeur
+déterministe classe la question en `metric_definition`, `chart_source`,
+`lineage`, `anomaly_explanation` ou `data_exploration`.
+
+Le profil business collecte uniquement les preuves correspondantes :
+`get_dbt_schema_yml` pour les définitions, le manifest et les modèles pour le
+lineage, et les tools DuckDB en lecture seule pour les valeurs et l'historique
+des métriques. Le Business Q&A Agent reçoit ce bundle et répond avec les
+sources utilisées. Aucune correction n'est proposée depuis le chat.
+
+Routes principales :
+
+- `GET /api/filters`
+- `GET /api/kpis`
+- `GET /api/charts/daily-trends`
+- `GET /api/charts/by-country`
+- `GET /api/charts/by-channel`
+- `GET /api/anomalies/overlays`
+- `POST /api/chat`

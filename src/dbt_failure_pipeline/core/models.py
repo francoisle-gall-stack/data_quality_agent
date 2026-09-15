@@ -73,6 +73,11 @@ class InvestigationContext(BaseModel):
     lineage: dict[str, Any] = Field(default_factory=dict)
     sources_used: list[str] = Field(default_factory=list)
     tool_reasons: dict[str, str] = Field(default_factory=dict)
+    question: str = ""
+    intent: str = ""
+    dashboard_context: dict[str, Any] = Field(default_factory=dict)
+    schema_yml: dict[str, Any] = Field(default_factory=dict)
+    warehouse_evidence: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProposedPatch(BaseModel):

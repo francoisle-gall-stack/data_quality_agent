@@ -23,19 +23,42 @@ def validate_read_only_sql(sql: str) -> None:
 
 def run_sql(sql: str, limit: int = 100) -> str:
     """Execute a read-only SQL query against DuckDB. Returns JSON rows."""
-    validate_read_only_sql(sql)
-    if "limit" not in sql.lower():
-        sql = f"{sql.rstrip(';')} LIMIT {limit}"
-    with get_connection(read_only=True) as con:
-        df = con.execute(sql).df()
-    return df.to_json(orient="records", date_format="iso")
+    try:
+        validate_read_only_sql(sql)
+    except ValueError as exc:
+        return json.dumps({
+            "error": str(exc),
+            "hint": "Retry with a single read-only SQL statement starting with SELECT or WITH.",
+        })
+    try:
+        if "limit" not in sql.lower():
+            sql = f"{sql.rstrip(';')} LIMIT {limit}"
+        with get_connection(read_only=True) as con:
+            df = con.execute(sql).df()
+        return df.to_json(orient="records", date_format="iso")
+    except Exception as exc:
+        return json.dumps({
+            "error": f"SQL execution failed: {exc}",
+            "hint": "Use only columns and tables exposed by the DuckDB warehouse; retry with a simpler SELECT.",
+        })
 
 
 def get_schema(table: str) -> str:
     """Return column names and types for a table."""
+    candidates = [table] if "." in table else [
+        f"main_marts.{table}",
+        f"main_staging.{table}",
+        f"main_intermediate.{table}",
+        f"main.{table}",
+    ]
     with get_connection(read_only=True) as con:
-        df = con.execute(f"describe {table}").df()
-    return df.to_json(orient="records")
+        for candidate in candidates:
+            try:
+                df = con.execute(f"describe {candidate}").df()
+                return df.to_json(orient="records")
+            except Exception:
+                continue
+    return json.dumps({"error": f"Table not found: {table}"})
 
 
 def get_table_profile(table: str, column: str | None = None, date: str | None = None) -> str:

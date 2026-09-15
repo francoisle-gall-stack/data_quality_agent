@@ -42,11 +42,20 @@ flowchart TD
     activate["Activation du scénario"] --> step1["1. Détection et diagnostic"]
     step1 --> diagnostic["diagnostic.json"]
     diagnostic --> step2["2. Construction du contexte"]
-    manifest["manifest.json"] --> step2
-    compiled["SQL compilés"] --> step2
-    git["Diff et historique Git"] --> step2
-    step2 --> context["Context Agent"]
-    context --> step3["3. Investigation Agent"]
+    step2 --> policy["Politique de collecte\n(catégorie + message d'erreur)"]
+    policy --> context["Context Agent"]
+    context -. "si lineage nécessaire" .-> manifest["get_dbt_manifest"]
+    context -. "si SQL compilé nécessaire" .-> compiled["get_dbt_compiled_sql"]
+    context -. "si régression possible" .-> git["get_dbt_git_history"]
+    context -. "modèle + upstream pertinents" .-> models["get_dbt_models"]
+    context -. "signal Jinja/macro uniquement" .-> macros["get_dbt_macros"]
+    manifest --> bundle["InvestigationContext"]
+    compiled --> bundle
+    git --> bundle
+    models --> bundle
+    macros --> bundle
+    context --> bundle
+    bundle --> step3["3. Investigation Agent"]
     step3 --> result["Résultat d'investigation sauvegardé"]
     result --> step4["4. Correction et validation"]
     step4 --> patch["Patch proposé"]
@@ -63,14 +72,39 @@ flowchart TD
 
 ### 2. Construction du contexte d'investigation
 
-- `context_agent` commence par `diagnostic.json`, puis choisit les tools
-  nécessaires parmi le manifest/lineage, les SQL compilés, l'historique Git,
-  `get_dbt_models` et `get_dbt_macros`.
-- Il ne charge pas systématiquement toutes les sources : la sélection dépend du
-  type d'erreur, des nœuds en échec et des références détectées.
-- Le champ `sources_used` conserve la liste des tools effectivement appelés.
+- Le pipeline transmet `diagnostic.json` au `context_agent` et construit une
+  politique de collecte à partir de la catégorie et du message d'erreur.
+- Le Context Agent ne relit pas `diagnostic.json` avec un tool : il choisit
+  uniquement les tools requis ou explicitement justifiés par cette politique.
+- `get_dbt_manifest` est utilisé pour la lineage, `get_dbt_compiled_sql` pour
+  les erreurs SQL, `get_dbt_git_history` pour les régressions et
+  `get_dbt_models` uniquement pour le modèle en erreur et les upstream utiles.
+- `get_dbt_macros` est interdit par défaut et n'est appelé qu'en présence d'un
+  signal Jinja ou macro.
+- `sources_used` conserve les tools appelés et `tool_reasons` explique
+  pourquoi chaque tool a été sélectionné.
 - Le résultat est validé comme `InvestigationContext` avant d'être transmis à
   l'agent d'investigation.
+
+Le contrat minimal du contexte transmis à l'`Investigation Agent` est :
+
+```json
+{
+  "diagnostic": {},
+  "manifest": {},
+  "compiled_sql": {},
+  "git": {},
+  "models": {},
+  "macros": {},
+  "lineage": {},
+  "sources_used": [],
+  "tool_reasons": {}
+}
+```
+
+Les champs correspondant aux tools non appelés restent vides. Le contexte est
+ensuite compacté pour éviter de transmettre deux fois le même SQL lorsque le
+manifest et `get_dbt_models` contiennent une information identique.
 
 ### 3. Investigation Agent
 
@@ -98,9 +132,47 @@ pip install -e ".[dev]"
 set DUCKDB_PATH=data/warehouse.duckdb
 dbt build --project-dir dbt --profiles-dir dbt
 
-streamlit run src/dq_platform/app/business_dashboard.py   # Dashboard métier
-streamlit run src/dq_platform/app/dq_dashboard.py         # Monitoring DQ
+dq-api                                                       # API du dashboard React
 ```
+
+### Dashboard React (module 2)
+
+Le dashboard métier est désormais disponible via une API FastAPI et un frontend
+Vite/React :
+
+```bash
+dq-run-checks
+dq-api
+cd frontend
+npm install
+npm run dev
+```
+
+Pour lancer le frontend dans Docker :
+
+```bash
+docker build -t dq-platform-frontend ./frontend
+docker run --rm -p 8080:80 dq-platform-frontend
+```
+
+Lancez l'API avec `dq-api` sur le port `8000`, puis ouvrez
+`http://localhost:8080`. Nginx relaie automatiquement `/api` vers l'API
+FastAPI de l'hôte.
+
+Pour lancer l'API et le frontend ensemble avec Docker Compose :
+
+```bash
+docker compose up --build
+```
+
+Le frontend est accessible sur `http://localhost:8080` et l'API sur
+`http://localhost:8000`.
+
+L'interface interroge les marts, affiche les anomalies détectées par les checks
+SQL sous forme d'overlays et expose un assistant métier. Le chat transmet le
+contexte du graphique et des filtres à un routeur d'intentions puis au Context
+Agent hybride. `GOOGLE_API_KEY` est nécessaire pour obtenir des réponses
+agentiques ; les graphiques restent disponibles sans cette clé.
 
 ## MCD interactif des marts
 
