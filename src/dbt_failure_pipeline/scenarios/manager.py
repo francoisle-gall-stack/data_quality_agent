@@ -15,9 +15,10 @@ ACTIVE_FILE = RUNTIME_DIR / "active_scenario.txt"
 
 
 def list_scenarios() -> list[str]:
-    return sorted(
+    scenarios = sorted(
         p.name for p in SCENARIOS_DIR.iterdir() if p.is_dir() and p.name.startswith("SC")
     )
+    return scenarios
 
 
 def get_scenario_info(scenario_id: str) -> dict[str, str | int | None]:

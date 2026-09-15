@@ -18,7 +18,11 @@ from dbt_failure_pipeline.core.state import (
     save_incident,
     set_current_incident_id,
 )
-from dbt_failure_pipeline.deterministic import run_dbt_build, run_diagnostic
+from dbt_failure_pipeline.deterministic import (
+    extract_dbt_error_text,
+    run_dbt_build,
+    run_diagnostic,
+)
 from dbt_failure_pipeline.orchestration.fix_pipeline import run_fix_pipeline
 from dbt_failure_pipeline.orchestration.pipeline import run_correction, run_investigation
 from dbt_failure_pipeline.scenarios.manager import (
@@ -150,37 +154,37 @@ if st.button("Run diagnostic, investigation & correction", type="primary"):
     else:
         run_results_path = settings.dbt_dir / "target" / "run_results.json"
         if not run_results_path.exists():
-            st.error(
-                "dbt build failed before producing run_results.json. "
-                f"See the dbt log: {result.log_path}"
+            diagnostic = extract_dbt_error_text(
+                f"{result.stdout}\n{result.stderr}",
+                command_executed=result.command,
             )
         else:
             diagnostic = run_diagnostic()
-            if not diagnostic.has_errors:
-                st.error("dbt build failed but no error nodes found in run_results.json.")
-            else:
-                incident_id = f"INC-{uuid.uuid4().hex[:8].upper()}"
-                record = InvestigationRecord(
-                    incident_id=incident_id,
-                    scenario_id=scenario_id,
-                    status=IncidentStatus.OPEN,
-                    diagnostic=diagnostic,
-                )
-                save_incident(record)
-                set_current_incident_id(incident_id)
-                st.session_state["incident_id"] = incident_id
-                st.success(f"Incident created: {incident_id}")
-                st.json(diagnostic.model_dump())
-                with st.spinner("Running investigation..."):
-                    record = _run_async(run_investigation(incident_id))
+        if not diagnostic.has_errors:
+            st.error("dbt build failed but no error nodes found in the diagnostic.")
+        else:
+            incident_id = f"INC-{uuid.uuid4().hex[:8].upper()}"
+            record = InvestigationRecord(
+                incident_id=incident_id,
+                scenario_id=scenario_id,
+                status=IncidentStatus.OPEN,
+                diagnostic=diagnostic,
+            )
+            save_incident(record)
+            set_current_incident_id(incident_id)
+            st.session_state["incident_id"] = incident_id
+            st.success(f"Incident created: {incident_id}")
+            st.json(diagnostic.model_dump())
+            with st.spinner("Running investigation..."):
+                record = _run_async(run_investigation(incident_id))
+            st.session_state["record"] = record
+            if record.investigation_output:
+                st.subheader("Investigation")
+                st.write(record.investigation_output)
+            if record.status == IncidentStatus.INVESTIGATED:
+                with st.spinner("Generating correction..."):
+                    record = _run_async(run_correction(incident_id))
                 st.session_state["record"] = record
-                if record.investigation_output:
-                    st.subheader("Investigation")
-                    st.write(record.investigation_output)
-                if record.status == IncidentStatus.INVESTIGATED:
-                    with st.spinner("Generating correction..."):
-                        record = _run_async(run_correction(incident_id))
-                    st.session_state["record"] = record
     st.rerun()
 
 incident_id = st.session_state.get("incident_id") or get_current_incident_id()

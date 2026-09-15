@@ -19,10 +19,12 @@ from dbt_failure_pipeline.deterministic.investigation.context.manifest import (
 )
 
 
-def build_investigation_context() -> InvestigationContext:
+def build_investigation_context(
+    diagnostic_override: dict | None = None,
+) -> InvestigationContext:
     """Assemble diagnostic, manifest filtré, SQL compilés et historique Git."""
     target_dir = settings.dbt_dir / "target"
-    diagnostic = load_diagnostic(target_dir)
+    diagnostic = diagnostic_override or load_diagnostic(target_dir)
     failed_nodes = get_failed_nodes(diagnostic)
     failed_ids = [node["unique_id"] for node in failed_nodes]
     selected_manifest = load_filtered_manifest(target_dir, failed_ids)

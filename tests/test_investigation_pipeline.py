@@ -63,7 +63,7 @@ async def test_investigation_only_makes_one_llm_call(monkeypatch):
     monkeypatch.setattr(
         pipeline,
         "build_investigation_context",
-        lambda: InvestigationContext(
+        lambda diagnostic_override=None: InvestigationContext(
             diagnostic=record.diagnostic.model_dump(),
             manifest={"nodes": {}},
             compiled_sql={},

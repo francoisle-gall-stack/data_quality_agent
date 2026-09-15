@@ -2,6 +2,7 @@
 
 from dbt_failure_pipeline.deterministic.diagnostic import (
     extract_dbt_errors,
+    extract_dbt_error_text,
     run_diagnostic,
     run_diagnostic_cli,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "DbtRunResult",
     "build_investigation_context",
     "extract_dbt_errors",
+    "extract_dbt_error_text",
     "run_dbt_build",
     "run_dbt_command",
     "run_dbt_compile",

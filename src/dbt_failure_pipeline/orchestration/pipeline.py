@@ -22,7 +22,6 @@ from dbt_failure_pipeline.core.models import (
     RootCauseAnalysis,
 )
 from dbt_failure_pipeline.core.state import load_incident, save_incident
-from dbt_failure_pipeline.deterministic import run_diagnostic
 from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 from dbt_failure_pipeline.evaluation.classification import classify_diagnostic, is_auto_fixable
 from dbt_failure_pipeline.observability.langfuse_setup import (
@@ -138,7 +137,7 @@ async def run_investigation(incident_id: str) -> InvestigationRecord:
     record.status = IncidentStatus.INVESTIGATING
     save_incident(record)
 
-    diagnostic = run_diagnostic()
+    diagnostic = record.diagnostic
     record.diagnostic = diagnostic
 
     if not is_auto_fixable(diagnostic):
@@ -168,7 +167,9 @@ async def run_investigation(incident_id: str) -> InvestigationRecord:
     )
 
     try:
-        context = build_investigation_context()
+        context = build_investigation_context(
+            diagnostic_override=record.diagnostic.model_dump()
+        )
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
         record.metadata["context_error"] = str(exc)
         record.status = IncidentStatus.NEEDS_HUMAN
