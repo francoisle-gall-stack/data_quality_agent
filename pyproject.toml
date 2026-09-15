@@ -18,6 +18,8 @@ dependencies = [
     "pydantic-settings>=2.6,<3",
     "python-dotenv>=1.0,<2",
     "streamlit>=1.50,<2",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
     "plotly>=5.24,<6",
     "google-adk>=2.8.0,<3",
     "langfuse>=4.14.6,<5",
@@ -38,6 +40,7 @@ dev = [
 [project.scripts]
 dq-run-checks = "dq_platform.quality.runner:main"
 dq-investigate = "dq_platform.orchestration.pipeline:main"
+dq-api = "dq_platform.api.main:main"
 dbt-activate-scenario = "dbt_failure_pipeline.scenarios.activate_cli:main"
 dbt-reset-scenario = "dbt_failure_pipeline.scenarios.reset_cli:main"
 dbt-run-investigation = "dbt_failure_pipeline.orchestration.pipeline:main"

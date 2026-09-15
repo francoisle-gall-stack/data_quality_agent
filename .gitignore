@@ -24,3 +24,6 @@ data/raw/*.csv
 .cursor/rules/.managed-skills.json
 .cursor/
 .vscode/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
