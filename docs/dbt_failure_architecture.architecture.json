@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Agents et tools du pipeline dbt",
+    "quality_profile": "showcase",
+    "viewBox": [900, 1200]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [30, 100],
+    "cols": 5,
+    "gapX": 20,
+    "gapY": 45,
+    "cellW": 150,
+    "cellH": 110
+  },
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Briques déterministes",
+      "wraps": ["dbtBuild", "diagnosticJson", "validation"]
+    },
+    {
+      "kind": "region",
+      "label": "Agents ADK",
+      "wraps": ["contextAgent", "investigationAgent", "correctionAgent"]
+    },
+    {
+      "kind": "region",
+      "label": "Tools de contexte — appelés selon le diagnostic",
+      "wraps": ["diagnosticTool", "manifestTool", "compiledTool", "gitTool", "modelsTool", "macrosTool"]
+    },
+    {
+      "kind": "region",
+      "label": "Tools de correction",
+      "wraps": ["modelTool", "macroTool", "patchTool"]
+    }
+  ],
+  "components": [
+    {
+      "id": "dbtBuild",
+      "type": "backend",
+      "label": "dbt build",
+      "sublabel": "détection déterministe",
+      "tag": "DÉTERMINISTE",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "diagnosticJson",
+      "type": "database",
+      "label": "diagnostic.json",
+      "sublabel": "erreur et nœuds en échec",
+      "tag": "ARTEFACT",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "contextAgent",
+      "type": "backend",
+      "label": "Context Agent",
+      "sublabel": "choisit les tools nécessaires",
+      "tag": "AGENT",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "diagnosticTool",
+      "type": "messagebus",
+      "label": "get_dbt_diagnostic",
+      "sublabel": "diagnostic_tool.py",
+      "tag": "TOOL",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "manifestTool",
+      "type": "messagebus",
+      "label": "get_dbt_manifest",
+      "sublabel": "manifest_tool.py",
+      "tag": "TOOL",
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "compiledTool",
+      "type": "messagebus",
+      "label": "get_dbt_compiled_sql",
+      "sublabel": "compiled_sql_tool.py",
+      "tag": "TOOL",
+      "row": 2,
+      "col": 2
+      ,"size": [150, 60]
+    },
+    {
+      "id": "gitTool",
+      "type": "messagebus",
+      "label": "get_dbt_git_history",
+      "sublabel": "git_history_tool.py",
+      "tag": "TOOL",
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "modelsTool",
+      "type": "messagebus",
+      "label": "get_dbt_models",
+      "sublabel": "models_tool.py",
+      "tag": "TOOL",
+      "row": 4,
+      "col": 2
+    },
+    {
+      "id": "macrosTool",
+      "type": "messagebus",
+      "label": "get_dbt_macros",
+      "sublabel": "macros_tool.py",
+      "tag": "TOOL",
+      "row": 5,
+      "col": 2
+    },
+    {
+      "id": "investigationContext",
+      "type": "database",
+      "label": "InvestigationContext",
+      "sublabel": "JSON validé · sources_used",
+      "tag": "ARTEFACT",
+      "row": 2,
+      "col": 3,
+      "size": [150, 60]
+    },
+    {
+      "id": "investigationAgent",
+      "type": "backend",
+      "label": "Investigation Agent",
+      "sublabel": "cause racine sans patch",
+      "tag": "AGENT",
+      "row": 3,
+      "col": 4
+    },
+    {
+      "id": "correctionAgent",
+      "type": "backend",
+      "label": "Correction Agent",
+      "sublabel": "correctif minimal",
+      "tag": "AGENT",
+      "row": 4,
+      "col": 3
+    },
+    {
+      "id": "modelTool",
+      "type": "messagebus",
+      "label": "get_dbt_model",
+      "sublabel": "model_tools.py",
+      "tag": "TOOL",
+      "row": 4,
+      "col": 4
+    },
+    {
+      "id": "macroTool",
+      "type": "messagebus",
+      "label": "get_dbt_macro",
+      "sublabel": "model_tools.py",
+      "tag": "TOOL",
+      "row": 5,
+      "col": 4
+    },
+    {
+      "id": "patchTool",
+      "type": "messagebus",
+      "label": "propose_patch",
+      "sublabel": "patch_tools.py",
+      "tag": "TOOL",
+      "row": 6,
+      "col": 4
+    },
+    {
+      "id": "validation",
+      "type": "backend",
+      "label": "Validation dbt",
+      "sublabel": "compile · test · build",
+      "tag": "DÉTERMINISTE",
+      "row": 5,
+      "col": 0
+    }
+  ],
+  "connections": [
+    { "id": "buildToDiagnostic", "from": "dbtBuild", "to": "diagnosticJson", "variant": "emphasis" },
+    { "id": "diagnosticToContext", "from": "diagnosticJson", "to": "contextAgent", "label": "déclenche", "variant": "emphasis" },
+    { "id": "contextToDiagnostic", "from": "contextAgent", "to": "diagnosticTool", "variant": "default" },
+    { "id": "contextToManifest", "from": "contextAgent", "to": "manifestTool", "variant": "default" },
+    { "id": "contextToCompiled", "from": "contextAgent", "to": "compiledTool", "variant": "default" },
+    { "id": "contextToGit", "from": "contextAgent", "to": "gitTool", "variant": "default" },
+    { "id": "contextToModels", "from": "contextAgent", "to": "modelsTool", "variant": "default" },
+    { "id": "contextToMacros", "from": "contextAgent", "to": "macrosTool", "variant": "default" },
+    { "id": "contextToInvestigation", "from": "investigationContext", "to": "investigationAgent", "variant": "emphasis" },
+    { "id": "investigationToCorrection", "from": "investigationAgent", "to": "correctionAgent", "variant": "default" },
+    { "id": "correctionToModel", "from": "correctionAgent", "to": "modelTool", "variant": "default" },
+    { "id": "correctionToMacro", "from": "correctionAgent", "to": "macroTool", "variant": "default" },
+    { "id": "correctionToPatch", "from": "correctionAgent", "to": "patchTool", "variant": "default" }
+  ]
+}
