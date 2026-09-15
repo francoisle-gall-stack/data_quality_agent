@@ -17,6 +17,10 @@ ALLOWLIST_ROOTS = [
 
 
 def _is_allowed(path: Path) -> bool:
+    """
+    - Return whether a path is inside an allowed dbt directory.
+    - Vérifie qu’un fichier se trouve dans un répertoire dbt autorisé.
+    """
     resolved = path.resolve()
     return any(str(resolved).startswith(str(root.resolve())) for root in ALLOWLIST_ROOTS)
 
@@ -26,7 +30,21 @@ def propose_patch(
     patched_content: str,
     summary: str,
 ) -> str:
-    """Propose a unified diff for a single allowlisted file."""
+    """Build a JSON patch proposal for one allowlisted dbt file.
+
+    Args:
+        file_path: Relative path of the file to patch.
+        patched_content: Complete file content after the proposed correction.
+        summary: Short description of the proposed correction.
+
+    Returns:
+        A JSON string containing the original content, patched content, and
+        unified diff, or an error when the target file does not exist.
+
+    Raises:
+        PatchNotAllowedError: If ``file_path`` is outside the allowed dbt
+            models, tests, and macros directories.
+    """
     relative_path = Path(file_path)
     if relative_path.parts and relative_path.parts[0] in {"models", "tests", "macros"}:
         target = (settings.dbt_dir / relative_path).resolve()
