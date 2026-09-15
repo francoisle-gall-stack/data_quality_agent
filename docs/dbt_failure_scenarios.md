@@ -58,8 +58,8 @@ where o.order_status in ('completed', 'confirmed', 'shipped')
 ```
 
 Le patch doit être limité au fichier indiqué dans le manifeste SC010. La
-description détaillée de l'anomalie est disponible dans
-[`docs/anomalies.md`](anomalies.md).
+description détaillée du scénario est disponible dans le manifeste
+[`scenarios/SC010/manifest.yaml`](../scenarios/SC010/manifest.yaml).
 
 ## Catalogue complet des scénarios
 

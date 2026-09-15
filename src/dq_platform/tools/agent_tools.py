@@ -158,21 +158,6 @@ def get_dbt_tests(model: str) -> str:
     return json.dumps(tests)
 
 
-def get_anomaly_history(table: str, metric: str, n: int = 5) -> str:
-    """Return recent anomalies for a table/metric."""
-    sql = f"""
-    select * from dq_anomalies
-    where table_name = '{table}' or metric = '{metric}'
-    order by detected_at desc limit {n}
-    """
-    with get_connection(read_only=True) as con:
-        try:
-            df = con.execute(sql).df()
-        except Exception:
-            return json.dumps([])
-    return df.to_json(orient="records", date_format="iso")
-
-
 def propose_patch(file_path: str, original_snippet: str, fixed_snippet: str, summary: str) -> str:
     """Propose a code patch (diff summary only — application requires human approval)."""
     allowed = (DBT_DIR / "models").resolve()

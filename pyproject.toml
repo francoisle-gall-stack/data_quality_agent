@@ -38,8 +38,6 @@ dev = [
 ]
 
 [project.scripts]
-dq-run-checks = "dq_platform.quality.runner:main"
-dq-investigate = "dq_platform.orchestration.pipeline:main"
 dq-api = "dq_platform.api.main:main"
 dbt-activate-scenario = "dbt_failure_pipeline.scenarios.activate_cli:main"
 dbt-reset-scenario = "dbt_failure_pipeline.scenarios.reset_cli:main"

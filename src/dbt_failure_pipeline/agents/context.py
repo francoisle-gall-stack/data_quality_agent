@@ -88,7 +88,6 @@ or propose a patch."""
 def create_business_context_agent() -> Agent:
     """Create the business profile without changing the failure profile."""
     from dq_platform.tools.agent_tools import (
-        get_anomaly_history,
         get_dbt_lineage as get_warehouse_lineage,
         get_dbt_model as get_warehouse_model,
         get_metric_history,
@@ -105,7 +104,6 @@ def create_business_context_agent() -> Agent:
             run_sql,
             get_schema,
             get_metric_history,
-            get_anomaly_history,
             get_warehouse_lineage,
             get_warehouse_model,
         ],

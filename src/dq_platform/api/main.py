@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 import asyncio
 
 from dq_platform.services import chart_queries
-from dq_platform.services.anomaly_overlays import get_overlays
 from dq_platform.orchestration.chat_pipeline import answer_question
 
 app = FastAPI(title="DQ Platform API", version="0.1.0")
@@ -86,11 +85,6 @@ def top_products(start: date | None = None, end: date | None = None, countries: 
 def top_stores(start: date | None = None, end: date | None = None, countries: list[str] = Query(default=[]), channels: list[str] = Query(default=[])):
     start, end = _dates(start, end)
     return chart_queries.get_top_stores(start, end, countries, channels)
-
-
-@app.get("/api/anomalies/overlays")
-def anomaly_overlays(chart_id: str | None = None) -> list[dict[str, Any]]:
-    return get_overlays(chart_id)
 
 
 @app.post("/api/chat")

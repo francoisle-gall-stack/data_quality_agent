@@ -141,7 +141,6 @@ Le dashboard métier est désormais disponible via une API FastAPI et un fronten
 Vite/React :
 
 ```bash
-dq-run-checks
 dq-api
 cd frontend
 npm install
@@ -168,11 +167,10 @@ docker compose up --build
 Le frontend est accessible sur `http://localhost:8080` et l'API sur
 `http://localhost:8000`.
 
-L'interface interroge les marts, affiche les anomalies détectées par les checks
-SQL sous forme d'overlays et expose un assistant métier. Le chat transmet le
-contexte du graphique et des filtres à un routeur d'intentions puis au Context
-Agent hybride. `GOOGLE_API_KEY` est nécessaire pour obtenir des réponses
-agentiques ; les graphiques restent disponibles sans cette clé.
+L'interface interroge les marts et expose un assistant métier. Le chat transmet
+le contexte du graphique et des filtres à un routeur d'intentions puis au
+Context Agent hybride. `GOOGLE_API_KEY` est nécessaire pour obtenir des
+réponses agentiques ; les graphiques restent disponibles sans cette clé.
 
 ## MCD interactif des marts
 
@@ -192,16 +190,6 @@ son grain et ses relations.
 Zensical peut servir à publier une documentation contenant une capture ou un
 lien vers ce MCD, mais ce n'est pas le moteur de diagramme interactif. Le HTML
 local est donc la vue d'exploration directement utilisable dans l'IDE.
-
-## Anomalies injectées
-
-Voir [docs/anomalies.md](docs/anomalies.md) pour la ground truth des 10 anomalies.
-
-## Data Quality (SQL)
-
-```bash
-dq-run-checks                   # Exécute les checks SQL déterministes
-```
 
 ## Agentic dbt Failure Investigator (MVP)
 
@@ -245,33 +233,17 @@ ne suffit donc pas à déclencher ce blocage. L'investigation doit expliquer
 pourquoi une transformation dbt ne peut pas corriger le problème avant de
 refuser un patch.
 
-## Agent investigation (DQ platform)
-
-Configurer `.env` (copier depuis `.env.example`) :
-
-```bash
-GOOGLE_API_KEY=...
-LANGFUSE_PUBLIC_KEY=...
-LANGFUSE_SECRET_KEY=...
-```
-
-```bash
-dq-investigate                  # Détection + investigation + proposition
-```
-
 ## Structure
 
 ```text
 src/dq_platform/
-  quality/       # Runner SQL déterministe
-  agents/        # Investigation + Correction (ADK)
-  tools/         # Tools ADK (lecture + propose_patch)
-  orchestration/ # Pipeline Python
-  app/           # Streamlit (métier + DQ)
-  store/         # Tables dq_* dans DuckDB
+  agents/        # Agent Q&A métier (ADK)
+  tools/         # Tools ADK en lecture seule
+  orchestration/ # Routage et chat
+  api/            # API FastAPI du dashboard
+  services/       # Requêtes de données
 dbt/             # Projet dbt-duckdb
-quality/sql_checks/  # Checks SQL versionnés
-docs/anomalies.md    # Ground truth
+frontend/        # Dashboard React
 ```
 
 ## Tests

@@ -213,9 +213,9 @@ préparé et soumis à l'approbation humaine.
 ## Mode business du Context Agent
 
 Le dashboard React appelle `POST /api/chat` avec une question et un
-`dashboard_context` (graphique, filtres et anomalie sélectionnée). Le routeur
-déterministe classe la question en `metric_definition`, `chart_source`,
-`lineage`, `anomaly_explanation` ou `data_exploration`.
+`dashboard_context` (graphique et filtres). Le routeur déterministe classe la
+question en `metric_definition`, `chart_source`, `lineage` ou
+`data_exploration`.
 
 Le profil business collecte uniquement les preuves correspondantes :
 `get_dbt_schema_yml` pour les définitions, le manifest et les modèles pour le
@@ -230,5 +230,4 @@ Routes principales :
 - `GET /api/charts/daily-trends`
 - `GET /api/charts/by-country`
 - `GET /api/charts/by-channel`
-- `GET /api/anomalies/overlays`
 - `POST /api/chat`

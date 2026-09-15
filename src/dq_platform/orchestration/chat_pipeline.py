@@ -8,7 +8,7 @@ import uuid
 from dq_platform.agents.business_qa import business_qa_agent
 from dq_platform.config import settings
 from dq_platform.orchestration.intent_router import classify_intent
-from dq_platform.orchestration.pipeline import _run_agent
+from dq_platform.orchestration.agent_runner import run_agent
 from dbt_failure_pipeline.agents.context import create_business_context_agent
 
 
@@ -22,7 +22,7 @@ async def answer_question(question: str, dashboard_context: dict) -> str:
         "collection_policy": intent.tools,
         "dashboard_context": dashboard_context,
     }
-    context_output = await _run_agent(
+    context_output = await run_agent(
         create_business_context_agent(),
         json.dumps(request, ensure_ascii=False),
         "dq_business_context",
@@ -32,4 +32,4 @@ async def answer_question(question: str, dashboard_context: dict) -> str:
         {"question": question, "intent": intent.name, "dashboard_context": dashboard_context, "evidence": context_output},
         ensure_ascii=False,
     )
-    return await _run_agent(business_qa_agent, qa_prompt, "dq_business_qa", f"qa-{uuid.uuid4().hex[:8]}")
+    return await run_agent(business_qa_agent, qa_prompt, "dq_business_qa", f"qa-{uuid.uuid4().hex[:8]}")

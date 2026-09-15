@@ -21,5 +21,5 @@ export function ChatPanel({ query, chartId }: { query: Query; chartId?: string }
     }
   };
 
-  return <section className="chat"><div className="chat__intro"><span className="chat__icon">✦</span><div><span className="eyebrow">Analyse augmentée</span><h2>Assistant métier</h2><p className="muted">Interrogez vos indicateurs et vos anomalies en langage naturel.</p></div></div><div className="answer">{answer || "Exemple : comment est calculé le CA ?"}</div><div className="chat-input"><input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask()} placeholder="Posez votre question..." /><button onClick={ask}>Envoyer <span>→</span></button></div></section>;
+  return <section className="chat"><div className="chat__intro"><span className="chat__icon">✦</span><div><span className="eyebrow">Analyse augmentée</span><h2>Assistant métier</h2><p className="muted">Interrogez vos indicateurs et vos données en langage naturel.</p></div></div><div className="answer">{answer || "Exemple : comment est calculé le CA ?"}</div><div className="chat-input"><input value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask()} placeholder="Posez votre question..." /><button onClick={ask}>Envoyer <span>→</span></button></div></section>;
 }
