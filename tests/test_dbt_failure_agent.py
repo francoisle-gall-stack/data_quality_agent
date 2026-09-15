@@ -19,6 +19,12 @@ from dbt_failure_pipeline.deterministic.investigation.context.manifest import (
 from dbt_failure_pipeline.evaluation.classification import classify_error
 from dbt_failure_pipeline.evaluation.metrics import classifications_match, failure_count_match
 from dbt_failure_pipeline.tools.model_tools import get_dbt_macro, get_dbt_model
+from dbt_failure_pipeline.tools.compiled_sql_tool import get_dbt_compiled_sql
+from dbt_failure_pipeline.tools.diagnostic_tool import get_dbt_diagnostic
+from dbt_failure_pipeline.tools.git_history_tool import get_dbt_git_history
+from dbt_failure_pipeline.tools.macros_tool import get_dbt_macros
+from dbt_failure_pipeline.tools.manifest_tool import get_dbt_manifest
+from dbt_failure_pipeline.tools.models_tool import get_dbt_models
 from dbt_failure_pipeline.tools.patch_tools import propose_patch
 
 
@@ -74,6 +80,48 @@ def test_get_dbt_macro_returns_source_sql(tmp_path, monkeypatch):
 
     assert result["path"] == "dbt/macros/order_revenue.sql"
     assert "order_revenue_expression" in result["sql"]
+
+
+def test_context_tools_collect_all_sources(tmp_path, monkeypatch):
+    dbt_dir = tmp_path / "dbt"
+    target = dbt_dir / "target"
+    model_dir = dbt_dir / "models" / "intermediate"
+    model_dir.mkdir(parents=True)
+    target.mkdir()
+    (model_dir / "orders.sql").write_text("select 1", encoding="utf-8")
+    (dbt_dir / "macros").mkdir()
+    (dbt_dir / "macros" / "revenue.sql").write_text(
+        "{% macro revenue() %}1{% endmacro %}", encoding="utf-8"
+    )
+    diagnostic = {
+        "failed_nodes": [{"unique_id": "model.project.orders"}],
+    }
+    manifest = {
+        "nodes": {
+            "model.project.orders": {
+                "unique_id": "model.project.orders",
+                "resource_type": "model",
+                "name": "orders",
+                "original_file_path": "models/intermediate/orders.sql",
+                "compiled_path": "target/compiled/project/models/orders.sql",
+                "depends_on": {"nodes": []},
+                "raw_code": "select 1",
+            }
+        }
+    }
+    (target / "diagnostic.json").write_text(json.dumps(diagnostic), encoding="utf-8")
+    (target / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    compiled = target / "compiled" / "project" / "models"
+    compiled.mkdir(parents=True)
+    (compiled / "orders.sql").write_text("select 1", encoding="utf-8")
+    monkeypatch.setattr(settings, "dbt_dir", dbt_dir)
+
+    assert json.loads(get_dbt_diagnostic()) == diagnostic
+    assert "model.project.orders" in json.loads(get_dbt_manifest())["nodes"]
+    assert json.loads(get_dbt_compiled_sql())["model.project.orders"]["sql"] == "select 1"
+    assert "model.project.orders" in json.loads(get_dbt_git_history())
+    assert json.loads(get_dbt_models("orders"))["orders"]["sql"] == "select 1"
+    assert "revenue" in json.loads(get_dbt_macros())
 
 
 def test_filtered_manifest_contains_transitive_lineage_for_multiple_failures(tmp_path):

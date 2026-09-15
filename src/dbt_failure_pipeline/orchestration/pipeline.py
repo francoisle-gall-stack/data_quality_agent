@@ -12,17 +12,18 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+from dbt_failure_pipeline.agents.context import context_agent
 from dbt_failure_pipeline.agents.correction import correction_agent
 from dbt_failure_pipeline.agents.investigation import investigation_agent
 from dbt_failure_pipeline.core.config import settings
 from dbt_failure_pipeline.core.models import (
     IncidentStatus,
+    InvestigationContext,
     InvestigationRecord,
     ProposedPatch,
     RootCauseAnalysis,
 )
 from dbt_failure_pipeline.core.state import load_incident, save_incident
-from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
 from dbt_failure_pipeline.evaluation.classification import classify_diagnostic, is_auto_fixable
 from dbt_failure_pipeline.observability.langfuse_setup import (
     flush_langfuse,
@@ -100,6 +101,21 @@ def _parse_patch_from_output(output: str) -> ProposedPatch | None:
     return None
 
 
+def _parse_context_from_output(output: str) -> InvestigationContext:
+    """Parse the context agent's JSON-only response."""
+    candidate = output.strip()
+    if candidate.startswith("```"):
+        candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", candidate).strip()
+    start = candidate.find("{")
+    end = candidate.rfind("}") + 1
+    if start < 0 or end <= start:
+        raise ValueError("Context agent did not return a JSON object")
+    try:
+        return InvestigationContext.model_validate(json.loads(candidate[start:end]))
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise ValueError(f"Invalid context agent response: {exc}") from exc
+
+
 def _build_rca_from_investigation(output: str) -> RootCauseAnalysis:
     confidence = 0.5
     conf_match = re.search(r"confidence[:\s]+([0-9.]+)", output, re.IGNORECASE)
@@ -166,19 +182,35 @@ async def run_investigation(incident_id: str) -> InvestigationRecord:
         else nullcontext()
     )
 
-    try:
-        context = build_investigation_context(
-            diagnostic_override=record.diagnostic.model_dump()
-        )
-    except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
-        record.metadata["context_error"] = str(exc)
-        record.status = IncidentStatus.NEEDS_HUMAN
-        save_incident(record)
-        flush_langfuse()
-        return record
-
-    record.metadata["lineage"] = context.lineage
     with trace_ctx:
+        failed_ids = ",".join(node.unique_id for node in diagnostic.failed_nodes)
+        context_prompt = f"""Build the investigation context for incident {incident_id}.
+
+Failed node IDs: {failed_ids}
+
+The diagnostic currently associated with the incident is:
+{diagnostic.model_dump_json(indent=2)}
+
+Use the diagnostic to decide which additional context tools are necessary.
+Return only the validated InvestigationContext JSON and list the tools actually
+called in sources_used.
+"""
+        try:
+            context_output = await _run_agent(
+                context_agent,
+                context_prompt,
+                "dbt_context",
+                f"context-{incident_id}",
+            )
+            context = _parse_context_from_output(context_output)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+            record.metadata["context_error"] = str(exc)
+            record.status = IncidentStatus.NEEDS_HUMAN
+            save_incident(record)
+            flush_langfuse()
+            return record
+
+        record.metadata["lineage"] = context.lineage
         inv_prompt = f"""Investigate the dbt root cause using only this deterministic context.
 
 {context.model_dump_json(indent=2)}

@@ -64,11 +64,14 @@ class RootCauseAnalysis(BaseModel):
 class InvestigationContext(BaseModel):
     """Evidence bundle passed to the investigation agent."""
 
-    diagnostic: dict[str, Any]
-    manifest: dict[str, Any]
-    compiled_sql: dict[str, dict[str, str]]
-    git: dict[str, Any]
+    diagnostic: dict[str, Any] = Field(default_factory=dict)
+    manifest: dict[str, Any] = Field(default_factory=dict)
+    compiled_sql: dict[str, dict[str, str]] = Field(default_factory=dict)
+    git: dict[str, Any] = Field(default_factory=dict)
+    models: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    macros: dict[str, dict[str, Any]] = Field(default_factory=dict)
     lineage: dict[str, Any] = Field(default_factory=dict)
+    sources_used: list[str] = Field(default_factory=list)
 
 
 class ProposedPatch(BaseModel):

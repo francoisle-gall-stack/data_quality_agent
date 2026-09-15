@@ -22,6 +22,8 @@ Data Generator → DuckDB (raw) → dbt (staging/int/marts)
                                       ↓
                               SQL DQ Checks (déterministe)
                                       ↓
+                              Context Agent (ADK)
+                                      ↓
                               Investigation Agent (ADK)
                                       ↓
                               Correction Agent (ADK)
@@ -43,7 +45,8 @@ flowchart TD
     manifest["manifest.json"] --> step2
     compiled["SQL compilés"] --> step2
     git["Diff et historique Git"] --> step2
-    step2 --> step3["3. Investigation Agent"]
+    step2 --> context["Context Agent"]
+    context --> step3["3. Investigation Agent"]
     step3 --> result["Résultat d'investigation sauvegardé"]
     result --> step4["4. Correction et validation"]
     step4 --> patch["Patch proposé"]
@@ -60,15 +63,21 @@ flowchart TD
 
 ### 2. Construction du contexte d'investigation
 
-- `build_investigation_context()` assemble les quatre sources :
-  `diagnostic.json`, `manifest.json`, SQL compilés et historique Git.
-- Le manifeste est filtré sur le nœud en échec et ses dépendances directes.
-- Les SQL compilés et l'historique Git couvrent le modèle en échec et ses parents.
+- `context_agent` commence par `diagnostic.json`, puis choisit les tools
+  nécessaires parmi le manifest/lineage, les SQL compilés, l'historique Git,
+  `get_dbt_models` et `get_dbt_macros`.
+- Il ne charge pas systématiquement toutes les sources : la sélection dépend du
+  type d'erreur, des nœuds en échec et des références détectées.
+- Le champ `sources_used` conserve la liste des tools effectivement appelés.
+- Le résultat est validé comme `InvestigationContext` avant d'être transmis à
+  l'agent d'investigation.
 
 ### 3. Investigation Agent
 
-- `run_investigation(incident_id)` injecte le contexte déterministe dans le prompt.
-- `investigation_agent` est appelé une seule fois et n'utilise aucun tool.
+- `run_investigation(incident_id)` appelle d'abord le Context Agent, puis injecte
+  son contexte structuré dans le prompt.
+- `investigation_agent` est appelé une seule fois après la construction du contexte
+  et n'utilise aucun tool.
 - L'agent produit le résultat d'investigation, la confiance et les modèles affectés, sans modifier le dépôt.
 
 ### 4. Correction et validation
