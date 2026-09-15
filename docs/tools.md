@@ -6,9 +6,9 @@ Le `Context Agent` construit le contexte transmis à l'`Investigation Agent`.
 Il ne cherche pas la cause racine et ne propose pas de correction : il collecte
 uniquement les preuves nécessaires à partir du diagnostic dbt.
 
-Le comportement est volontairement sélectif. Le diagnostic est lu en premier,
-puis le `Context Agent` décide quels autres tools sont utiles pour l'erreur
-observée.
+Le comportement est volontairement sélectif. Le diagnostic est lu par le
+pipeline puis transmis au `Context Agent`, qui décide quels autres tools sont
+utiles pour l'erreur observée.
 
 > Cette documentation concerne les tools du `Context Agent`, et non les outils
 > utilisés ultérieurement par le `Correction Agent`.
@@ -16,10 +16,10 @@ observée.
 ## Séquence générale
 
 ```text
-diagnostic.json
+diagnostic.json + politique de collecte
       │
       ▼
-get_dbt_diagnostic                 appelé en premier
+sélection déterministe des tools
       │
       ├── besoin de lineage ?      get_dbt_manifest
       ├── erreur SQL/Jinja ?       get_dbt_compiled_sql
@@ -28,32 +28,23 @@ get_dbt_diagnostic                 appelé en premier
       └── macro impliquée ?        get_dbt_macros
 ```
 
-Le contexte final contient la liste `sources_used`. Elle indique les tools
-effectivement appelés par l'agent.
+Le contexte final contient `sources_used` et `tool_reasons`. Ils indiquent les
+tools effectivement appelés et la justification fondée sur le diagnostic ou
+sur un résultat déjà collecté.
 
-## Tool systématique
+## Diagnostic et politique de collecte
 
-### `get_dbt_diagnostic`
-
-Fichier : [`src/dbt_failure_pipeline/tools/diagnostic_tool.py`](../src/dbt_failure_pipeline/tools/diagnostic_tool.py)
-
-Ce tool lit `dbt/target/diagnostic.json` et fournit notamment :
-
-- les nœuds en échec ;
-- leur `unique_id` ;
-- le type de nœud ;
-- le message d'erreur ;
-- la commande dbt exécutée.
-
-Il est appelé en premier lorsque le `Context Agent` est exécuté. Il sert de
-point de départ pour décider des autres collectes.
+Le pipeline lit `dbt/target/diagnostic.json` avant de lancer le `Context Agent`.
+Le diagnostic complet est transmis dans son prompt, avec une politique de
+collecte calculée à partir de la catégorie et du message d'erreur.
+`get_dbt_diagnostic` n'est donc pas rappelé par le Context Agent : cela
+dupliquerait le même artefact sans apporter de preuve supplémentaire.
 
 ### Cas où aucun tool n'est appelé
 
 Le pipeline ne lance pas le `Context Agent` pour les erreurs classées
 `infrastructure` ou `config_error`, car elles ne sont pas considérées comme
-auto-corrigeables. Dans ce cas, même `get_dbt_diagnostic` n'est pas appelé par
-le `Context Agent` : le pipeline s'arrête avant cette étape et demande une
+auto-corrigeables. Le pipeline s'arrête avant la collecte et demande une
 intervention humaine.
 
 ## Tools conditionnels
@@ -150,21 +141,21 @@ impliqué :
 - différence entre le template Jinja et le SQL compilé.
 
 Lorsqu'un nom de macro est connu, il doit être fourni afin de limiter la
-collecte. Le tool accepte aussi un appel sans nom pour retourner tous les
-macros, mais ce mode doit rester exceptionnel et justifié par le diagnostic.
+collecte. Le mode sans nom est interdit par défaut et ne peut être utilisé que
+si la politique de collecte l'autorise explicitement.
 
 ## Matrice indicative par type d'erreur
 
-| Type d'erreur | Diagnostic | Manifest | SQL compilé | Git | Modèles | Macros |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Compilation / syntaxe SQL | Oui | Selon lineage | Oui | Selon régression | Souvent | Si Jinja |
-| Colonne manquante / renommée | Oui | Oui | Souvent | Selon changement récent | Oui | Non, sauf indication |
-| Dépendance / upstream | Oui | Oui | Selon erreur | Selon régression | Oui | Non |
-| Test `not_null`, `unique`, `accepted_values` | Oui | Selon impact | Généralement non | Selon régression | Selon transformation | Non |
-| Test de relationships | Oui | Oui | Généralement non | Selon régression | Selon modèles concernés | Non |
-| Cast ou erreur de type | Oui | Selon lineage | Oui si SQL généré | Selon régression | Oui | Si macro impliquée |
-| Macro absente ou SQL macro invalide | Oui | Selon lineage | Oui | Selon modification | Oui | Oui |
-| Configuration / infrastructure | Non dans le Context Agent | Non | Non | Non | Non | Non |
+| Type d'erreur | Manifest | SQL compilé | Git | Modèles | Macros |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| Compilation / syntaxe SQL | Selon lineage | Oui | Selon régression | Oui | Si Jinja |
+| Colonne manquante / renommée | Oui | Oui | Oui | Oui | Non, sauf indication |
+| Dépendance / upstream | Oui | Selon erreur | Oui | Oui | Non |
+| Test `not_null`, `unique`, `accepted_values` | Selon impact | Non | Selon régression | Selon transformation | Non |
+| Test de relationships | Oui | Non | Selon régression | Selon modèles concernés | Non |
+| Cast ou erreur de type | Selon lineage | Oui | Selon régression | Oui | Si macro impliquée |
+| Macro absente ou SQL macro invalide | Selon lineage | Oui | Selon modification | Oui | Oui |
+| Configuration / infrastructure | Non | Non | Non | Non | Non |
 
 Cette matrice donne une orientation, pas une règle mécanique. La décision
 finale appartient au `Context Agent`, qui peut appeler un tool supplémentaire
@@ -184,7 +175,8 @@ Le `Context Agent` retourne un objet JSON compatible avec
   "models": {},
   "macros": {},
   "lineage": {},
-  "sources_used": []
+  "sources_used": [],
+  "tool_reasons": {}
 }
 ```
 

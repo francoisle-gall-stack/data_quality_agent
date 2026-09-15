@@ -72,6 +72,7 @@ class InvestigationContext(BaseModel):
     macros: dict[str, dict[str, Any]] = Field(default_factory=dict)
     lineage: dict[str, Any] = Field(default_factory=dict)
     sources_used: list[str] = Field(default_factory=list)
+    tool_reasons: dict[str, str] = Field(default_factory=dict)
 
 
 class ProposedPatch(BaseModel):

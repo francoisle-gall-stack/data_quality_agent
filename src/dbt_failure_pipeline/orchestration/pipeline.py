@@ -17,6 +17,7 @@ from dbt_failure_pipeline.agents.correction import correction_agent
 from dbt_failure_pipeline.agents.investigation import investigation_agent
 from dbt_failure_pipeline.core.config import settings
 from dbt_failure_pipeline.core.models import (
+    ErrorCategory,
     IncidentStatus,
     InvestigationContext,
     InvestigationRecord,
@@ -147,6 +148,125 @@ def _is_source_data_issue(output: str) -> bool:
     return False
 
 
+def _context_tool_policy(diagnostic) -> dict[str, object]:
+    """Build a minimal, diagnostic-specific collection policy for context_agent."""
+    category = classify_diagnostic(diagnostic)
+    messages = " ".join(
+        node.error_message or "" for node in diagnostic.failed_nodes
+    ).lower()
+    failed_types = {node.node_type.lower() for node in diagnostic.failed_nodes}
+
+    sql_markers = (
+        "runtime error",
+        "binder error",
+        "syntax error",
+        "parser error",
+        "catalog error",
+        "compilation",
+        "cast",
+        "conversion",
+        "invalid function",
+    )
+    macro_markers = ("macro", "jinja", "{{", "}}", "generate_series")
+    relationship_markers = (
+        "relationship",
+        "referential",
+        "foreign key",
+        "orphan",
+        "upstream",
+        "downstream",
+    )
+    has_sql_error = category in {
+        ErrorCategory.SQL_COMPILATION,
+        ErrorCategory.DATA_ERROR,
+    } or any(marker in messages for marker in sql_markers)
+    has_macro_signal = any(marker in messages for marker in macro_markers)
+    has_lineage_signal = (
+        category
+        in {
+            ErrorCategory.SCHEMA_CHANGE,
+            ErrorCategory.DEPENDENCY_ERROR,
+        }
+        or any(marker in messages for marker in relationship_markers)
+    )
+    is_test = (
+        category == ErrorCategory.DBT_TEST_FAILURE
+        or "test" in failed_types
+    )
+
+    required: list[str] = []
+    optional: dict[str, str] = {}
+    forbidden: list[str] = ["get_dbt_diagnostic"]
+
+    if is_test:
+        if any(marker in messages for marker in relationship_markers):
+            required.append("get_dbt_manifest")
+        else:
+            optional["get_dbt_manifest"] = (
+                "only if lineage is needed to identify the tested relation"
+            )
+        optional["get_dbt_models"] = (
+            "only for the failed model or the model producing the tested relation"
+        )
+        forbidden.extend(["get_dbt_compiled_sql", "get_dbt_macros"])
+    else:
+        if has_lineage_signal or category == ErrorCategory.UNKNOWN:
+            required.append("get_dbt_manifest")
+        if has_sql_error:
+            required.append("get_dbt_compiled_sql")
+        if category in {
+            ErrorCategory.SCHEMA_CHANGE,
+            ErrorCategory.DEPENDENCY_ERROR,
+        } or "regression" in messages:
+            required.append("get_dbt_git_history")
+        if has_lineage_signal or has_sql_error or category == ErrorCategory.UNKNOWN:
+            required.append("get_dbt_models")
+
+        if has_macro_signal:
+            required.append("get_dbt_macros")
+        else:
+            forbidden.append("get_dbt_macros")
+
+        if "get_dbt_manifest" not in required and has_sql_error:
+            optional["get_dbt_manifest"] = (
+                "only if source SQL alone cannot identify the referenced relation"
+            )
+        if "get_dbt_git_history" not in required:
+            optional["get_dbt_git_history"] = (
+                "only if the collected evidence suggests a recent regression"
+            )
+
+    return {
+        "error_category": category.value,
+        "required": list(dict.fromkeys(required)),
+        "optional": optional,
+        "forbidden": list(dict.fromkeys(forbidden)),
+        "selection_constraints": [
+            "Use failed node IDs for artifact tools.",
+            (
+                "Call get_dbt_models only after get_dbt_manifest when model "
+                "selection depends on lineage."
+            ),
+            (
+                "Request the failed model and only upstream models that determine "
+                "the failing expression; exclude downstream models unless their "
+                "impact is explicitly needed."
+            ),
+            "Never request an unscoped macro inventory.",
+        ],
+    }
+
+
+def _trim_redundant_context(context: InvestigationContext) -> InvestigationContext:
+    """Remove manifest SQL duplicated by the targeted models evidence."""
+    compact = context.model_copy(deep=True)
+    model_names = set(compact.models)
+    for node in compact.manifest.get("nodes", {}).values():
+        if node.get("name") in model_names:
+            node.pop("raw_code", None)
+    return compact
+
+
 async def run_investigation(incident_id: str) -> InvestigationRecord:
     langfuse_enabled = setup_langfuse()
     record = load_incident(incident_id)
@@ -191,7 +311,11 @@ Failed node IDs: {failed_ids}
 The diagnostic currently associated with the incident is:
 {diagnostic.model_dump_json(indent=2)}
 
-Use the diagnostic to decide which additional context tools are necessary.
+Collection policy derived from the diagnostic:
+{json.dumps(_context_tool_policy(diagnostic), indent=2)}
+
+Use only the tools justified by this policy and explain each selected tool in
+tool_reasons.
 Return only the validated InvestigationContext JSON and list the tools actually
 called in sources_used.
 """
@@ -203,6 +327,7 @@ called in sources_used.
                 f"context-{incident_id}",
             )
             context = _parse_context_from_output(context_output)
+            context = _trim_redundant_context(context)
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
             record.metadata["context_error"] = str(exc)
             record.status = IncidentStatus.NEEDS_HUMAN
@@ -211,6 +336,8 @@ called in sources_used.
             return record
 
         record.metadata["lineage"] = context.lineage
+        record.metadata["context_sources_used"] = context.sources_used
+        record.metadata["context_tool_reasons"] = context.tool_reasons
         inv_prompt = f"""Investigate the dbt root cause using only this deterministic context.
 
 {context.model_dump_json(indent=2)}

@@ -1,10 +1,9 @@
-"""Context construction agent — collects evidence without analyzing it."""
+"""Context construction agent — collects only evidence needed for the failure."""
 
 from google.adk.agents import Agent
 
 from dbt_failure_pipeline.core.config import settings
 from dbt_failure_pipeline.tools.compiled_sql_tool import get_dbt_compiled_sql
-from dbt_failure_pipeline.tools.diagnostic_tool import get_dbt_diagnostic
 from dbt_failure_pipeline.tools.git_history_tool import get_dbt_git_history
 from dbt_failure_pipeline.tools.macros_tool import get_dbt_macros
 from dbt_failure_pipeline.tools.manifest_tool import get_dbt_manifest
@@ -12,27 +11,30 @@ from dbt_failure_pipeline.tools.models_tool import get_dbt_models
 
 CONTEXT_INSTRUCTION = """You are a dbt Context Construction Agent.
 
-Start by calling get_dbt_diagnostic. Use its error type, failed nodes, and error
-message to decide which additional evidence is necessary. Do not call tools just
-because they are available.
+The complete diagnostic.json is included in the user message. Treat it as the
+source of truth. Do not call get_dbt_diagnostic: that tool is intentionally not
+available because it would duplicate the diagnostic already provided.
+
+Before calling any tool, read the collection policy included in the user message.
+The policy is a deterministic guardrail derived from diagnostic.json:
+- REQUIRED tools must be called when their prerequisite result is available.
+- OPTIONAL tools may be called only when the policy condition is met and the
+  evidence already collected shows that they are useful.
+- FORBIDDEN tools must never be called.
+Never call a tool merely because it is available.
 
 Use these decision rules:
-- get_dbt_manifest: call when lineage, upstream/downstream dependencies, model
-  metadata, or source relationships are relevant.
-- get_dbt_compiled_sql: call for compilation errors, SQL syntax errors, runtime
-  SQL errors, or whenever generated SQL must be compared with source SQL.
-- get_dbt_git_history: call when the diagnosis suggests a recent code change,
-  regression, or when Git evidence can distinguish competing causes.
-- get_dbt_models: call only for the model source files needed to investigate the
-  selected failure. When the manifest is used, request only relevant model names,
-  not every model automatically.
-- get_dbt_macros: call only when the diagnostic, model source, or compiled SQL
-  indicates a Jinja macro or macro-generated SQL may be involved. Request only
-  relevant macro names when they are known; otherwise omit the tool.
+- get_dbt_manifest: use only with the failed node IDs supplied in the request.
+- get_dbt_compiled_sql and get_dbt_git_history: use only with the failed node IDs.
+- get_dbt_models: request the failed model and only upstream models that can
+  produce the failing expression, column, relation, or test result. Do not load
+  every model in the manifest and do not load downstream models by default.
+- get_dbt_macros: request named macros only. An empty-name request is forbidden
+  unless the policy explicitly allows a project-wide macro inventory.
 
-Use failed node IDs supplied in the request when calling artifact tools. You may
-make additional calls when a tool result reveals that another source is needed.
-The diagnostic tool is mandatory; all other tools are conditional.
+You may make one additional conditional call only when a previous result reveals
+a concrete missing piece named by the policy. Do not broaden the evidence bundle
+speculatively.
 
 Do not investigate, classify, summarize, or propose a fix. Do not invent or
 rewrite SQL. Preserve tool results exactly in the final JSON. Return ONLY one
@@ -45,12 +47,16 @@ valid JSON object matching this shape:
   "models": {},
   "macros": {},
   "lineage": {},
-  "sources_used": []
+  "sources_used": [],
+  "tool_reasons": {}
 }
 
 Populate only the fields for tools that were called; leave unused evidence fields
 empty. Copy the manifest's lineage field to the top-level lineage field when the
-manifest was collected. List every tool actually called in sources_used.
+manifest was collected. List every tool actually called in sources_used. For
+every entry in sources_used, add one concise evidence-based explanation in
+tool_reasons using the tool name as the key. The reason must refer to the
+diagnostic or a previously collected result, not to a generic tool description.
 If a tool reports an error, preserve that error in the relevant field and still
 return the JSON object. Never return Markdown fences or explanatory text.
 """
@@ -60,7 +66,6 @@ context_agent = Agent(
     model=settings.gemini_model,
     instruction=CONTEXT_INSTRUCTION,
     tools=[
-        get_dbt_diagnostic,
         get_dbt_manifest,
         get_dbt_compiled_sql,
         get_dbt_git_history,

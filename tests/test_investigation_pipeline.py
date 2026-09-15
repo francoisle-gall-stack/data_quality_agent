@@ -8,6 +8,7 @@ from dbt_failure_pipeline.core.models import (
     DbtDiagnostic,
     FailedNode,
     IncidentStatus,
+    InvestigationContext,
     InvestigationRecord,
 )
 from dbt_failure_pipeline.core.state import save_incident
@@ -27,6 +28,82 @@ def test_source_data_issue_requires_human_review():
     )
     assert not pipeline._is_source_data_issue(
         "The model has a missing column caused by an incorrect ref()."
+    )
+
+
+def test_context_policy_targets_schema_change_evidence():
+    diagnostic = DbtDiagnostic(
+        command_executed="dbt build",
+        has_errors=True,
+        failed_nodes=[
+            FailedNode(
+                node_type="model",
+                unique_id="model.project.orders",
+                node_name="orders",
+                error_message=(
+                    "Runtime Error: Binder Error: relation does not have a "
+                    "column named customer_segment"
+                ),
+            )
+        ],
+    )
+
+    policy = pipeline._context_tool_policy(diagnostic)
+
+    assert policy["error_category"] == "schema_change"
+    assert policy["required"] == [
+        "get_dbt_manifest",
+        "get_dbt_compiled_sql",
+        "get_dbt_git_history",
+        "get_dbt_models",
+    ]
+    assert "get_dbt_macros" in policy["forbidden"]
+    assert "get_dbt_diagnostic" in policy["forbidden"]
+
+
+def test_context_policy_allows_macros_only_for_macro_errors():
+    diagnostic = DbtDiagnostic(
+        command_executed="dbt compile",
+        has_errors=True,
+        failed_nodes=[
+            FailedNode(
+                node_type="model",
+                unique_id="model.project.orders",
+                node_name="orders",
+                error_message="Compilation Error in macro order_revenue",
+            )
+        ],
+    )
+
+    policy = pipeline._context_tool_policy(diagnostic)
+
+    assert "get_dbt_macros" in policy["required"]
+    assert "get_dbt_macros" not in policy["forbidden"]
+
+
+def test_trim_context_removes_manifest_sql_already_collected_as_model():
+    context = InvestigationContext(
+        manifest={
+            "nodes": {
+                "model.project.orders": {
+                    "name": "orders",
+                    "raw_code": "select * from upstream",
+                },
+                "model.project.customers": {
+                    "name": "customers",
+                    "raw_code": "select * from raw_customers",
+                },
+            }
+        },
+        models={"orders": {"sql": "select * from upstream"}},
+    )
+
+    trimmed = pipeline._trim_redundant_context(context)
+
+    assert "raw_code" not in trimmed.manifest["nodes"]["model.project.orders"]
+    assert (
+        trimmed.manifest["nodes"]["model.project.customers"]["raw_code"]
+        == "select * from raw_customers"
     )
 
 

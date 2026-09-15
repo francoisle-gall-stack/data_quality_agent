@@ -93,6 +93,12 @@ def load_filtered_manifest(
     compact_nodes = {}
     for node_id in sorted(selected_ids):
         node = all_nodes[node_id]
+        config = node.get("config", {})
+        compact_config = {
+            key: config[key]
+            for key in ("materialized", "schema", "alias", "access", "enabled")
+            if key in config
+        }
         compact_nodes[node_id] = {
             key: node[key]
             for key in (
@@ -105,11 +111,12 @@ def load_filtered_manifest(
                 "compiled_path",
                 "raw_code",
                 "depends_on",
-                "config",
                 "columns",
             )
             if key in node
         }
+        if compact_config:
+            compact_nodes[node_id]["config"] = compact_config
 
     return {
         "nodes": compact_nodes,
