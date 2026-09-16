@@ -27,3 +27,6 @@ data/raw/*.csv
 frontend/node_modules/
 frontend/dist/
 frontend/tsconfig.tsbuildinfo
+.github/instructions/datamate/
+.github/instructions/general-awareness.instructions.md
+.github/instructions/.managed-skills.json

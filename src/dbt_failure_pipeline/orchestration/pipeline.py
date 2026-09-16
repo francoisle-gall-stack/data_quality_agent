@@ -31,6 +31,7 @@ from dbt_failure_pipeline.observability.langfuse_setup import (
     setup_langfuse,
     trace_context,
 )
+from dbt_failure_pipeline.scenarios.manager import _load_manifest
 
 _SOURCE_DATA_MARKERS = (
     "source data issue:",
@@ -394,7 +395,17 @@ async def run_correction(incident_id: str) -> InvestigationRecord:
         return record
 
     os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
+    primary = record.diagnostic.primary_failed_node
+    target_file = ""
+    if record.scenario_id:
+        manifest = _load_manifest(record.scenario_id)
+        patch_files = manifest.get("patch_files", [])
+        if patch_files:
+            target_file = patch_files[0]
     corr_prompt = f"""Propose a minimal fix for ONE file.
+
+Target file (required): {target_file or "see primary failed node below"}
+Primary failed node: {primary.unique_id if primary else "unknown"}
 
 Diagnostic:
 {record.diagnostic.model_dump_json(indent=2)}
@@ -402,6 +413,7 @@ Diagnostic:
 Investigation:
 {record.investigation_output}
 
+You MUST call propose_patch only for the target file above.
 Use propose_patch with the full corrected SQL content.
 Return only the concise fix proposal and the structured patch result.
 Do not repeat the root cause, explanation, evidence, confidence, or test list.

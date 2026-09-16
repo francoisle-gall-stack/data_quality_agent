@@ -20,9 +20,11 @@ from dbt_failure_pipeline.core.state import (
 )
 from dbt_failure_pipeline.deterministic import (
     extract_dbt_error_text,
+    prioritize_failed_nodes_for_scenario,
     run_dbt_build,
     run_diagnostic,
 )
+from dbt_failure_pipeline.evaluation.classification import classify_diagnostic, is_auto_fixable
 from dbt_failure_pipeline.orchestration.fix_pipeline import run_fix_pipeline
 from dbt_failure_pipeline.orchestration.pipeline import run_correction, run_investigation
 from dbt_failure_pipeline.scenarios.manager import (
@@ -36,6 +38,52 @@ from dbt_failure_pipeline.scenarios.manager import (
 
 def _run_async(coro):
     return asyncio.run(coro)
+
+
+def _check_duckdb_available() -> str | None:
+    """Return a user-facing message when DuckDB cannot be opened for dbt."""
+    path = settings.duckdb_path
+    if not path.exists():
+        return f"DuckDB file not found: {path}"
+    try:
+        import duckdb
+
+        conn = duckdb.connect(str(path), read_only=False)
+        conn.close()
+    except Exception as exc:
+        message = str(exc)
+        if "cannot open file" in message.lower() or "already open" in message.lower():
+            return (
+                f"DuckDB is locked ({path}). Close other connections "
+                "(Cursor tab, API server, another terminal) and retry."
+            )
+        return f"Cannot open DuckDB: {exc}"
+    return None
+
+
+def _infrastructure_error_message(diagnostic) -> str | None:
+    """Explain why investigation was skipped for infrastructure failures."""
+    if is_auto_fixable(diagnostic):
+        return None
+    category = classify_diagnostic(diagnostic)
+    if category.value != "infrastructure":
+        return (
+            f"Investigation skipped: {category.value} error is not auto-fixable. "
+            "See Diagnostic for details."
+        )
+    node = diagnostic.primary_failed_node
+    detail = ""
+    if node and node.error_message:
+        for line in node.error_message.splitlines():
+            if "already open in" in line.lower():
+                detail = line.strip()
+                break
+        if not detail and "cannot open file" in node.error_message.lower():
+            detail = "DuckDB file is locked by another process."
+    return (
+        "Investigation skipped: DuckDB is locked and dbt could not run. "
+        f"{detail} Close other connections, then run the pipeline again."
+    ).strip()
 
 
 def _render_side_by_side_diff(original: str, corrected: str) -> None:
@@ -144,7 +192,15 @@ with col2:
     active = get_active_scenario()
     st.info(f"Active scenario: {active or 'none'}")
 
+duckdb_error = _check_duckdb_available()
+if duckdb_error:
+    st.warning(duckdb_error)
+
 if st.button("Run diagnostic, investigation & correction", type="primary"):
+    lock_error = _check_duckdb_available()
+    if lock_error:
+        st.error(lock_error)
+        st.stop()
     if reset_first:
         reset_scenario()
     activate_scenario(scenario_id)
@@ -163,6 +219,7 @@ if st.button("Run diagnostic, investigation & correction", type="primary"):
         if not diagnostic.has_errors:
             st.error("dbt build failed but no error nodes found in the diagnostic.")
         else:
+            diagnostic = prioritize_failed_nodes_for_scenario(diagnostic, scenario_id)
             incident_id = f"INC-{uuid.uuid4().hex[:8].upper()}"
             record = InvestigationRecord(
                 incident_id=incident_id,
@@ -191,11 +248,14 @@ incident_id = st.session_state.get("incident_id") or get_current_incident_id()
 if incident_id:
     st.subheader(f"Incident {incident_id}")
     record = load_incident(incident_id)
-
     record = st.session_state.get("record") or record
 
     with st.expander("Diagnostic", expanded=False):
         st.json(record.diagnostic.model_dump())
+
+    infra_message = _infrastructure_error_message(record.diagnostic)
+    if infra_message:
+        st.error(infra_message)
 
     with st.expander("Investigation", expanded=True):
         st.write(record.investigation_output or "(not run)")

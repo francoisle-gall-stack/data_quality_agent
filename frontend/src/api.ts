@@ -1,4 +1,4 @@
-export type Filters = { min_date: string; max_date: string; countries: string[]; channels: string[] };
+export type Filters = { min_date: string; max_date: string; data_refresh_date: string | null; countries: string[]; channels: string[] };
 export type Query = { start: string; end: string; countries: string[]; channels: string[] };
 const params = (q: Query) => {
   const result = new URLSearchParams({ start: q.start, end: q.end });

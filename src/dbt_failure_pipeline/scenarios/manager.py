@@ -46,6 +46,40 @@ def _load_manifest(scenario_id: str) -> dict:
     return manifest
 
 
+def _all_patch_files() -> set[str]:
+    files: set[str] = set()
+    for scenario in list_scenarios():
+        manifest = _load_manifest(scenario)
+        files.update(manifest.get("patch_files", []))
+    return files
+
+
+def _find_baseline_backup(rel_path: str) -> Path | None:
+    for scenario_id in list_scenarios():
+        manifest = _load_manifest(scenario_id)
+        if rel_path not in manifest.get("patch_files", []):
+            continue
+        backup_file = BACKUP_DIR / scenario_id / rel_path.replace("/", "__")
+        if backup_file.exists():
+            return backup_file
+    return None
+
+
+def restore_foreign_patches(scenario_id: str) -> list[str]:
+    """Restore files patched by other scenarios before activating a new one."""
+    manifest = _load_manifest(scenario_id)
+    keep = set(manifest.get("patch_files", []))
+    restored: list[str] = []
+    for rel_path in sorted(_all_patch_files() - keep):
+        backup_file = _find_baseline_backup(rel_path)
+        target = PROJECT_ROOT / rel_path
+        if backup_file:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(backup_file, target)
+            restored.append(rel_path)
+    return restored
+
+
 def validate_scenario(scenario_id: str) -> dict:
     """Validate manifest metadata and every declared patch before activation."""
     manifest = _load_manifest(scenario_id)
@@ -72,6 +106,7 @@ def validate_scenario(scenario_id: str) -> dict:
 
 def activate_scenario(scenario_id: str) -> dict:
     manifest = validate_scenario(scenario_id)
+    restored_foreign = restore_foreign_patches(scenario_id)
     backup_path = BACKUP_DIR / scenario_id
     backup_path.mkdir(parents=True, exist_ok=True)
 
@@ -82,8 +117,9 @@ def activate_scenario(scenario_id: str) -> dict:
             if not src.exists():
                 src = SCENARIOS_DIR / scenario_id / "patches" / Path(rel_path).name
             target = PROJECT_ROOT / rel_path
-            if target.exists():
-                shutil.copy2(target, backup_path / rel_path.replace("/", "__"))
+            backup_file = backup_path / rel_path.replace("/", "__")
+            if target.exists() and not backup_file.exists():
+                shutil.copy2(target, backup_file)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, target)
             patched.append(rel_path)
@@ -99,7 +135,11 @@ def activate_scenario(scenario_id: str) -> dict:
 
     ACTIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
     ACTIVE_FILE.write_text(scenario_id, encoding="utf-8")
-    return {"scenario_id": scenario_id, "patched_files": patched}
+    return {
+        "scenario_id": scenario_id,
+        "patched_files": patched,
+        "restored_foreign_files": restored_foreign,
+    }
 
 
 def reset_scenario() -> dict:

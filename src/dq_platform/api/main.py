@@ -10,6 +10,12 @@ from pydantic import BaseModel, Field
 import asyncio
 
 from dq_platform.services import chart_queries
+from dq_platform.services.dbt_failure_pipeline import (
+    approve_run,
+    get_run,
+    scenarios,
+    start_run,
+)
 from dq_platform.orchestration.chat_pipeline import answer_question
 
 app = FastAPI(title="DQ Platform API", version="0.1.0")
@@ -26,6 +32,11 @@ class ChatRequest(BaseModel):
     dashboard_context: dict[str, Any] = Field(default_factory=dict)
 
 
+class PipelineRunRequest(BaseModel):
+    scenario_id: str
+    reset_before_activate: bool = True
+
+
 def _dates(start: date | None, end: date | None) -> tuple[date, date]:
     filters = chart_queries.get_filters()
     return start or filters["min_date"], end or filters["max_date"]
@@ -39,6 +50,32 @@ def health() -> dict[str, str]:
 @app.get("/api/filters")
 def filters() -> dict[str, Any]:
     return chart_queries.get_filters()
+
+
+@app.get("/api/dbt-failure/scenarios")
+def dbt_failure_scenarios() -> list[dict[str, Any]]:
+    return scenarios()
+
+
+@app.post("/api/dbt-failure/runs")
+async def start_dbt_failure_run(request: PipelineRunRequest) -> dict[str, Any]:
+    return start_run(request.scenario_id, request.reset_before_activate).as_dict()
+
+
+@app.get("/api/dbt-failure/runs/{run_id}")
+def dbt_failure_run(run_id: str) -> dict[str, Any]:
+    run = get_run(run_id)
+    if run is None:
+        return {"error": "Pipeline run not found"}
+    return run.as_dict()
+
+
+@app.post("/api/dbt-failure/runs/{run_id}/approve")
+async def approve_dbt_failure_run(run_id: str) -> dict[str, Any]:
+    run = get_run(run_id)
+    if run is None:
+        return {"error": "Pipeline run not found"}
+    return (await approve_run(run_id)).as_dict()
 
 
 @app.get("/api/kpis")

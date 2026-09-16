@@ -28,11 +28,13 @@ def query_df(sql: str, params: list[Any] | None = None):
 
 def get_filters() -> dict[str, Any]:
     dates = query_df("select min(order_date) as min_date, max(order_date) as max_date from main_marts.fct_orders")
+    refresh = query_df("select max(order_date) as data_refresh_date from main_marts.fct_daily_sales")
     countries = query_df("select distinct country_code from main_marts.fct_orders order by 1")
     channels = query_df("select distinct channel from main_marts.fct_orders order by 1")
     return {
         "min_date": dates.iloc[0]["min_date"],
         "max_date": dates.iloc[0]["max_date"],
+        "data_refresh_date": refresh.iloc[0]["data_refresh_date"],
         "countries": countries["country_code"].tolist(),
         "channels": channels["channel"].tolist(),
     }

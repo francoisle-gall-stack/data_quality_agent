@@ -105,6 +105,28 @@ def extract_dbt_error_text(
     return diagnostic
 
 
+def prioritize_failed_nodes_for_scenario(
+    diagnostic: DbtDiagnostic,
+    scenario_id: str,
+) -> DbtDiagnostic:
+    """Put failed nodes that match the scenario patch files first."""
+    from dbt_failure_pipeline.scenarios.manager import _load_manifest
+
+    manifest = _load_manifest(scenario_id)
+    patch_names = {Path(path).name for path in manifest.get("patch_files", [])}
+
+    def sort_key(node: FailedNode) -> tuple[int, str]:
+        node_name = Path(node.file_path or node.node_name).name
+        return (0 if node_name in patch_names else 1, node.unique_id)
+
+    if not diagnostic.failed_nodes:
+        return diagnostic
+    ordered = sorted(diagnostic.failed_nodes, key=sort_key)
+    if ordered == diagnostic.failed_nodes:
+        return diagnostic
+    return diagnostic.model_copy(update={"failed_nodes": ordered})
+
+
 def run_diagnostic(output_path: Path | str | None = None) -> DbtDiagnostic:
     """Run diagnostic using run_results.json from the default dbt target directory."""
     target_dir = settings.dbt_dir / "target"
