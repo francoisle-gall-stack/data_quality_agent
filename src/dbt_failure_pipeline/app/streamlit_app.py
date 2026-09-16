@@ -22,6 +22,7 @@ from dbt_failure_pipeline.deterministic import (
     extract_dbt_error_text,
     prioritize_failed_nodes_for_scenario,
     run_dbt_build,
+    run_dbt_full_refresh,
     run_diagnostic,
 )
 from dbt_failure_pipeline.evaluation.classification import classify_diagnostic, is_auto_fixable
@@ -179,10 +180,17 @@ st.set_page_config(page_title="dbt Failure Investigator", layout="wide")
 st.title("Agentic dbt Failure Investigator")
 
 scenarios = list_scenarios()
+default_scenario_index = (
+    scenarios.index("SC037") if "SC037" in scenarios else 0
+)
 col1, col2 = st.columns(2)
 
 with col1:
-    scenario_id = st.selectbox("Scenario", scenarios, index=0 if scenarios else None)
+    scenario_id = st.selectbox(
+        "Scenario",
+        scenarios,
+        index=default_scenario_index if scenarios else None,
+    )
     reset_first = st.checkbox("Reset before activate", value=True)
     if scenario_id:
         scenario_info = get_scenario_info(scenario_id)
@@ -204,6 +212,11 @@ if st.button("Run diagnostic, investigation & correction", type="primary"):
     if reset_first:
         reset_scenario()
     activate_scenario(scenario_id)
+    if scenario_id == "SC037":
+        full_refresh = run_dbt_full_refresh()
+        if not full_refresh.success:
+            st.error("SC037 full-refresh preparation failed — see the dbt log.")
+            st.stop()
     result = run_dbt_build()
     if result.success:
         st.error("dbt build succeeded — scenario did not produce a failure.")

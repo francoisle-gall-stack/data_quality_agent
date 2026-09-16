@@ -12,6 +12,7 @@ from dbt_failure_pipeline.deterministic.execution import (
     run_dbt_build,
     run_dbt_command,
     run_dbt_compile,
+    run_dbt_full_refresh,
     run_dbt_test,
 )
 from dbt_failure_pipeline.deterministic.investigation.context import build_investigation_context
@@ -25,6 +26,7 @@ __all__ = [
     "run_dbt_build",
     "run_dbt_command",
     "run_dbt_compile",
+    "run_dbt_full_refresh",
     "run_dbt_test",
     "run_diagnostic",
     "run_diagnostic_cli",

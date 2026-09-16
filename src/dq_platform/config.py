@@ -1,10 +1,13 @@
 """Centralized configuration."""
 
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(
+    os.getenv("APP_ROOT", Path(__file__).resolve().parents[2])
+)
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 DBT_DIR = PROJECT_ROOT / "dbt"

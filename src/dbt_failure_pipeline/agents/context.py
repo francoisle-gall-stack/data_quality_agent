@@ -9,6 +9,7 @@ from dbt_failure_pipeline.tools.macros_tool import get_dbt_macros
 from dbt_failure_pipeline.tools.manifest_tool import get_dbt_manifest
 from dbt_failure_pipeline.tools.models_tool import get_dbt_models
 from dbt_failure_pipeline.tools.schema_yml_tool import get_dbt_schema_yml
+from dq_platform.tools.agent_tools import run_sql
 
 CONTEXT_INSTRUCTION = """You are a dbt Context Construction Agent.
 
@@ -32,6 +33,9 @@ Use these decision rules:
   every model in the manifest and do not load downstream models by default.
 - get_dbt_macros: request named macros only. An empty-name request is forbidden
   unless the policy explicitly allows a project-wide macro inventory.
+- run_sql: use only when the policy requires warehouse evidence. The query must
+  be a single read-only SELECT/WITH statement targeted at the failing key,
+  recent partition, or temporal relationship described by the diagnostic.
 
 You may make one additional conditional call only when a previous result reveals
 a concrete missing piece named by the policy. Do not broaden the evidence bundle
@@ -72,6 +76,7 @@ context_agent = Agent(
         get_dbt_git_history,
         get_dbt_models,
         get_dbt_macros,
+        run_sql,
     ],
 )
 

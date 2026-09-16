@@ -7,6 +7,7 @@ type PipelineRun = {
   status: string;
   incident_id?: string;
   error?: string;
+  full_refresh_result?: { success: boolean; command: string };
   record?: {
     status: string;
     diagnostic: { command_executed: string; failed_nodes: unknown[] };
@@ -42,7 +43,7 @@ export function DbtFailurePipeline() {
   useEffect(() => {
     fetch("/api/dbt-failure/scenarios").then((response) => response.json()).then((items: Scenario[]) => {
       setScenarios(items);
-      setScenarioId(items[0]?.scenario_id || "");
+      setScenarioId(items.find((item) => item.scenario_id === "SC037")?.scenario_id || items[0]?.scenario_id || "");
     });
   }, []);
 
@@ -90,6 +91,7 @@ export function DbtFailurePipeline() {
     {run && <section className="pipeline-result">
       <div className="pipeline-status"><strong>{statusLabels[run.status] || run.status}</strong><span>{run.incident_id || run.run_id}</span></div>
       {run.error && <div className="pipeline-error">{run.error}</div>}
+      {run.full_refresh_result && <details><summary>Préparation full-refresh</summary><pre>{JSON.stringify(run.full_refresh_result, null, 2)}</pre></details>}
       {record && <>
         <details open><summary>Diagnostic</summary><pre>{JSON.stringify(record.diagnostic, null, 2)}</pre></details>
         <details open><summary>Investigation</summary><div className="pipeline-output">{record.investigation_output || "(not run)"}</div></details>

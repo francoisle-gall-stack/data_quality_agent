@@ -31,7 +31,17 @@ def classify_error(message: str) -> ErrorCategory:
         for x in ["not found", "does not exist", "referenced column", "does not have a column"]
     ) and any(x in lower for x in ["column", "table", "field"]):
         return ErrorCategory.SCHEMA_CHANGE
-    if any(x in lower for x in ["depends on", "upstream", "skipped due to"]):
+    if any(
+        x in lower
+        for x in [
+            "depends on",
+            "upstream",
+            "skipped due to",
+            "duplicate key",
+            "merge failed",
+            "incremental",
+        ]
+    ):
         return ErrorCategory.DEPENDENCY_ERROR
     if any(
         x in lower

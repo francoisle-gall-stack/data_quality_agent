@@ -177,6 +177,14 @@ def _context_tool_policy(diagnostic) -> dict[str, object]:
         "upstream",
         "downstream",
     )
+    warehouse_markers = (
+        "duplicate key",
+        "merge",
+        "incremental",
+        "scd2",
+        "validity",
+        "overlap",
+    )
     has_sql_error = category in {
         ErrorCategory.SQL_COMPILATION,
         ErrorCategory.DATA_ERROR,
@@ -190,6 +198,7 @@ def _context_tool_policy(diagnostic) -> dict[str, object]:
         }
         or any(marker in messages for marker in relationship_markers)
     )
+    has_warehouse_signal = any(marker in messages for marker in warehouse_markers)
     is_test = (
         category == ErrorCategory.DBT_TEST_FAILURE
         or "test" in failed_types
@@ -211,7 +220,7 @@ def _context_tool_policy(diagnostic) -> dict[str, object]:
         )
         forbidden.extend(["get_dbt_compiled_sql", "get_dbt_macros"])
     else:
-        if has_lineage_signal or category == ErrorCategory.UNKNOWN:
+        if has_lineage_signal or has_warehouse_signal or category == ErrorCategory.UNKNOWN:
             required.append("get_dbt_manifest")
         if has_sql_error:
             required.append("get_dbt_compiled_sql")
@@ -220,13 +229,21 @@ def _context_tool_policy(diagnostic) -> dict[str, object]:
             ErrorCategory.DEPENDENCY_ERROR,
         } or "regression" in messages:
             required.append("get_dbt_git_history")
-        if has_lineage_signal or has_sql_error or category == ErrorCategory.UNKNOWN:
+        if (
+            has_lineage_signal
+            or has_warehouse_signal
+            or has_sql_error
+            or category == ErrorCategory.UNKNOWN
+        ):
             required.append("get_dbt_models")
 
         if has_macro_signal:
             required.append("get_dbt_macros")
         else:
             forbidden.append("get_dbt_macros")
+
+        if has_warehouse_signal:
+            required.append("run_sql")
 
         if "get_dbt_manifest" not in required and has_sql_error:
             optional["get_dbt_manifest"] = (
@@ -254,6 +271,10 @@ def _context_tool_policy(diagnostic) -> dict[str, object]:
                 "impact is explicitly needed."
             ),
             "Never request an unscoped macro inventory.",
+            (
+                "When run_sql is required, query only the failed key and recent "
+                "partition or the temporal relationship implicated by the error."
+            ),
         ],
     }
 

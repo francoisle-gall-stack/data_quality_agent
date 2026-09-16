@@ -14,6 +14,7 @@ from dbt_failure_pipeline.deterministic import (
     extract_dbt_error_text,
     prioritize_failed_nodes_for_scenario,
     run_dbt_build,
+    run_dbt_full_refresh,
     run_diagnostic,
 )
 from dbt_failure_pipeline.orchestration.fix_pipeline import run_fix_pipeline
@@ -37,6 +38,7 @@ class PipelineRun:
     error: str | None = None
     reset_result: dict[str, Any] = field(default_factory=dict)
     activation_result: dict[str, Any] = field(default_factory=dict)
+    full_refresh_result: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -49,6 +51,7 @@ class PipelineRun:
             "active_scenario": get_active_scenario(),
             "reset_result": self.reset_result,
             "activation_result": self.activation_result,
+            "full_refresh_result": self.full_refresh_result,
         }
 
 
@@ -76,6 +79,17 @@ async def _execute(run: PipelineRun, reset_before_activate: bool) -> None:
         if reset_before_activate:
             run.reset_result = reset_scenario()
         run.activation_result = activate_scenario(run.scenario_id)
+        if run.scenario_id == "SC037":
+            full_refresh = run_dbt_full_refresh()
+            run.full_refresh_result = {
+                "success": full_refresh.success,
+                "command": full_refresh.command,
+                "log_path": str(full_refresh.log_path),
+            }
+            if not full_refresh.success:
+                run.status = "error"
+                run.error = "The SC037 full-refresh preparation failed."
+                return
         result = run_dbt_build()
         run_results_path = settings.dbt_dir / "target" / "run_results.json"
         if result.success:

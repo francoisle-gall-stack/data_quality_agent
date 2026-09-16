@@ -7,6 +7,7 @@ COPY src ./src
 COPY dbt ./dbt
 COPY data ./data
 COPY quality ./quality
+COPY scenarios ./scenarios
 
 RUN pip install --no-cache-dir .
 

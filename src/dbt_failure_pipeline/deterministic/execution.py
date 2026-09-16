@@ -63,6 +63,22 @@ def run_dbt_build() -> DbtRunResult:
     )
 
 
+def run_dbt_full_refresh(selection: str = "dim_customers fct_orders") -> DbtRunResult:
+    return run_dbt_command(
+        [
+            "dbt",
+            "build",
+            "--project-dir",
+            str(settings.dbt_dir),
+            "--profiles-dir",
+            str(settings.dbt_dir),
+            "--select",
+            *selection.split(),
+            "--full-refresh",
+        ]
+    )
+
+
 def run_dbt_compile() -> DbtRunResult:
     return run_dbt_command(
         [

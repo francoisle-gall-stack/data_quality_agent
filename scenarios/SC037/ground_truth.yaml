@@ -1,0 +1,28 @@
+schema_version: 2
+scenario_id: SC037
+difficulty_level: 5
+level: expert
+error_type: dependency_error
+expected_root_cause:
+  model: dim_customers
+  issue: overlapping_scd2_validity_intervals_multiply_incremental_order_rows
+  affected_model: fct_orders
+  key: order_id
+  trigger: recent_incremental_partition
+  full_refresh_behavior: succeeds_after_deduplicating_customer_versions
+expected_fix:
+  files:
+    - dbt/models/2_marts/dim_customers.sql
+    - dbt/models/2_marts/fct_orders.sql
+  strategies:
+    - close_or_reject_overlapping_scd2_intervals
+    - select_one_customer_version_deterministically
+    - use_a_safe_incremental_backfill_window
+    - rebuild_fct_orders_with_full_refresh_before_resuming_incremental_runs
+expected_evidence:
+  - merge_duplicate_key_error
+  - comparison_of_incremental_and_full_refresh
+  - fct_orders_to_dim_customers_lineage
+  - compiled_temporal_join
+  - overlapping_validity_intervals
+  - recent_partition_only

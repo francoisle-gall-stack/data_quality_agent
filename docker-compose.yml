@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
+      APP_ROOT: /app
       DUCKDB_PATH: /app/data/warehouse.duckdb
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}

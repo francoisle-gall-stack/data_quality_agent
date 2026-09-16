@@ -209,7 +209,18 @@ dbt-eval-scenarios                   # Évalue SC001–SC010 (classification, sa
 dbt-reset-scenario                 # Restaure le baseline dbt
 ```
 
-Scénarios reproductibles : `scenarios/SC001` … `SC036` avec ground truth YAML.
+Scénarios reproductibles : `scenarios/SC001` … `SC037` avec ground truth YAML.
+Le scénario de démonstration `SC037` reproduit un échec intermittent du
+`MERGE` incrémental de `fct_orders` causé par des intervalles SCD2 qui se
+chevauchent dans `dim_customers`. Un full-refresh valide prépare l'état, puis
+le run incrémental échoue sur les commandes récentes :
+
+```bash
+dbt-activate-scenario SC037
+dbt build --project-dir dbt --profiles-dir dbt --select dim_customers fct_orders --full-refresh
+dbt build --project-dir dbt --profiles-dir dbt --select fct_orders
+```
+
 La taxonomie par difficulté et la matrice complète sont décrites dans
 [docs/dbt_failure_scenarios.md](docs/dbt_failure_scenarios.md).
 
